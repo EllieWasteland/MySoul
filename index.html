@@ -28,7 +28,9 @@
 
         html, body {
             height: 100%;
-            overflow: hidden;
+            /* CORRECCIÓN: Permitir scroll vertical pero no horizontal */
+            overflow-y: auto;
+            overflow-x: hidden;
             background-color: var(--bg-color);
             color: var(--text-primary);
             font-family: 'Inter', sans-serif;
@@ -109,7 +111,8 @@
         .snap-section {
             scroll-snap-align: start;
             height: 100vh;
-            width: 100vw;
+            /* CORRECCIÓN: Usar 100% en lugar de 100vw para evitar overflow por la barra de scroll */
+            width: 100%;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -175,6 +178,7 @@
             display: flex;
             align-items: flex-end;
             justify-content: center;
+            overflow: hidden; /* Asegurar que el SVG no se desborde */
         }
         .topo-svg-background {
             width: 150%;
@@ -434,7 +438,7 @@
         if ('serviceWorker' in navigator) {
             const swContent = `
                 // Define un nombre y una versión para tu caché.
-                const CACHE_NAME = 'mysoul-cache-v1.2'; // Incrementa la versión para forzar actualización
+                const CACHE_NAME = 'mysoul-cache-v1.3'; // Incrementa la versión para forzar actualización
 
                 // Lista de archivos y recursos esenciales para que la app funcione sin conexión.
                 const urlsToCache = [
