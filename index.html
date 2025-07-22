@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MySoul</title>
     
+    <!-- Metadatos para PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#000000">
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+
     <!-- Scripts y Fuentes Externas -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18,7 +23,6 @@
             --text-secondary: #a0a0a0;
             --border-color: rgba(255, 255, 255, 0.2);
             --online-color: #00ff89;
-            /* CORRECCIÓN: Color más visible para las decoraciones */
             --hud-color: rgba(255, 255, 255, 0.7); 
         }
 
@@ -28,7 +32,6 @@
             background-color: var(--bg-color);
             color: var(--text-primary);
             font-family: 'Inter', sans-serif;
-            /* CORRECCIÓN: Fondo de puntos más visible */
             background-image: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.12) 1px, transparent 0);
             background-size: 28px 28px;
         }
@@ -221,13 +224,12 @@
             position: absolute;
             width: 12px;
             height: 12px;
-            opacity: 0.7; /* Aumentar opacidad */
+            opacity: 0.7;
             z-index: 20;
         }
         .corner-decoration::before, .corner-decoration::after {
             content: '';
             position: absolute;
-            /* CORRECCIÓN: Usar variable de color blanco */
             background-color: var(--hud-color); 
         }
         .corner-decoration::before { width: 100%; height: 1px; top: 50%; left: 0; transform: translateY(-50%); }
@@ -266,12 +268,12 @@
             </div>
         </section>
 
-        <!-- Sección 2: F.O.C.O -->
-        <section id="foco-view" class="snap-section" data-href="index.html">
+        <!-- Sección 2: MyTime (antes F.O.C.O) -->
+        <section id="mytime-view" class="snap-section" data-href="mytime.html">
             <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
             <div class="section-container">
                 <div class="section-content">
-                    <h2 class="section-title">F.O.C.O</h2>
+                    <h2 class="section-title">MyTime</h2>
                     <p class="section-description">Gestión de tareas y enfoque para maximizar tu productividad.</p>
                     <div class="online-indicator"><div class="light"></div>[ En linea ]</div>
                 </div>
@@ -286,12 +288,12 @@
             </div>
         </section>
 
-        <!-- Sección 3: MyYo -->
-        <section id="myyo-view" class="snap-section" data-href="my_yo.html">
+        <!-- Sección 3: MyMemory (antes MyYo) -->
+        <section id="mymemory-view" class="snap-section" data-href="mymemory.html">
             <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
             <div class="section-container">
                 <div class="section-content">
-                    <h2 class="section-title">MyYo</h2>
+                    <h2 class="section-title">MyMemory</h2>
                     <p class="section-description">Tu memoria extendida para organizar aficiones, ideas y listas.</p>
                     <div class="online-indicator"><div class="light"></div>[ En linea ]</div>
                 </div>
@@ -330,6 +332,19 @@
     </div>
 
     <script>
+        // Registrar Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('ServiceWorker registration failed: ', error);
+                    });
+            });
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             // --- Elementos del DOM ---
             const lockScreen = document.getElementById('lock-screen');
