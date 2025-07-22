@@ -1,11 +1,11 @@
 {
-  "name": "FOCO by VitreumStudios: Gestión y Enfoque",
-  "short_name": "FOCO",
-  "start_url": ".",
+  "name": "MySoul",
+  "short_name": "MySoul",
+  "start_url": "/index.html",
   "display": "standalone",
-  "background_color": "#0C0A1A",
-  "theme_color": "#0C0A1A",
-  "description": "Una PWA para gestionar tus tareas, organizar tu horario y mejorar tu concentración.",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "description": "MySoul: Tu sistema operativo personal. Accede a tus módulos MyTime y MyMemory.",
   "icons": [
     {
       "src": "icons/icon-192x192.png",
