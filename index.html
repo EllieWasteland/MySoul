@@ -28,7 +28,6 @@
 
         html, body {
             height: 100%;
-            /* CORRECCIÓN: Permitir scroll vertical pero no horizontal */
             overflow-y: auto;
             overflow-x: hidden;
             background-color: var(--bg-color);
@@ -111,7 +110,6 @@
         .snap-section {
             scroll-snap-align: start;
             height: 100vh;
-            /* CORRECCIÓN: Usar 100% en lugar de 100vw para evitar overflow por la barra de scroll */
             width: 100%;
             display: flex;
             align-items: center;
@@ -164,6 +162,7 @@
             letter-spacing: -0.03em;
             line-height: 1;
             color: var(--text-primary);
+            transition: font-size 0.3s ease;
         }
         .section-description {
             font-size: 1.125rem;
@@ -171,6 +170,19 @@
             margin-top: 1rem;
         }
         
+        /* CORRECCIÓN: Media query para hacer el título más pequeño en móviles */
+        @media (max-width: 640px) {
+            .section-title {
+                font-size: 3.5rem;
+            }
+            #lock-screen-time {
+                font-size: 5rem;
+            }
+            #lock-screen-date {
+                font-size: 1rem;
+            }
+        }
+
         /* --- SVGs Topográficos --- */
         .topo-svg-container {
             width: 100%;
@@ -178,7 +190,7 @@
             display: flex;
             align-items: flex-end;
             justify-content: center;
-            overflow: hidden; /* Asegurar que el SVG no se desborde */
+            overflow: hidden;
         }
         .topo-svg-background {
             width: 150%;
@@ -438,7 +450,7 @@
         if ('serviceWorker' in navigator) {
             const swContent = `
                 // Define un nombre y una versión para tu caché.
-                const CACHE_NAME = 'mysoul-cache-v1.3'; // Incrementa la versión para forzar actualización
+                const CACHE_NAME = 'mysoul-cache-v1.4'; // Incrementa la versión para forzar actualización
 
                 // Lista de archivos y recursos esenciales para que la app funcione sin conexión.
                 const urlsToCache = [
