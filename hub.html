@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MySoul</title>
+    
+    <!-- Scripts y Fuentes Externas -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bitcount+Prop+Single:wght@400;600&family=Inter:wght@300;400&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #000000;
+            --text-primary: #FFFFFF;
+            --text-secondary: #a0a0a0;
+            --border-color: rgba(255, 255, 255, 0.2);
+            --online-color: #00ff89;
+            /* CORRECCIÓN: Color más visible para las decoraciones */
+            --hud-color: rgba(255, 255, 255, 0.7); 
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            /* CORRECCIÓN: Fondo de puntos más visible */
+            background-image: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.12) 1px, transparent 0);
+            background-size: 28px 28px;
+        }
+
+        /* --- Pantalla de Bloqueo --- */
+        #lock-screen {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 4rem 2rem 2rem;
+            background-color: var(--bg-color);
+            transition: opacity 0.8s ease-out, visibility 0.8s;
+        }
+        #lock-screen.unlocked {
+            opacity: 0;
+            visibility: hidden;
+        }
+        #lock-screen-time {
+            font-family: 'Bitcount Prop Single', sans-serif;
+            font-size: 7rem;
+            font-weight: 400;
+            letter-spacing: -0.05em;
+        }
+        #lock-screen-date {
+            font-size: 1.25rem;
+            font-weight: 400;
+            color: var(--text-secondary);
+        }
+        #slider-container {
+            width: 100%;
+            max-width: 350px;
+            border: 1px solid var(--border-color);
+            border-radius: 9999px;
+            padding: 0.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+        #slider-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%;
+            text-align: center;
+            font-weight: 500;
+            letter-spacing: 1px;
+            pointer-events: none;
+            z-index: 1;
+        }
+        #slider-handle {
+            width: 50px;
+            height: 50px;
+            background: var(--text-primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: grab;
+            position: relative;
+            z-index: 2;
+        }
+        #slider-handle:active { cursor: grabbing; }
+
+        /* --- Contenedor Principal --- */
+        .snap-container {
+            scroll-snap-type: y mandatory;
+            height: 100vh;
+            overflow-y: scroll;
+            scroll-behavior: smooth;
+        }
+        .snap-section {
+            scroll-snap-align: start;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            position: relative;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 1s ease;
+        }
+        .snap-section.visible {
+            opacity: 1;
+        }
+        .snap-section.exiting .section-container {
+            opacity: 0;
+            transform: scale(1.1);
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+
+        /* --- Contenido de las Secciones --- */
+        .section-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+        .section-content {
+            text-align: center;
+            width: 100%;
+            max-width: 600px;
+            padding-top: 10vh;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: content-fade-in 0.8s 0.2s forwards;
+        }
+        @keyframes content-fade-in {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .section-title {
+            font-family: 'Bitcount Prop Single', sans-serif;
+            font-size: 5rem;
+            font-weight: 600;
+            letter-spacing: -0.03em;
+            line-height: 1;
+            color: var(--text-primary);
+        }
+        .section-description {
+            font-size: 1.125rem;
+            color: var(--text-secondary);
+            margin-top: 1rem;
+        }
+        
+        /* --- SVGs Topográficos --- */
+        .topo-svg-container {
+            width: 100%;
+            height: 40vh;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+        }
+        .topo-svg-background {
+            width: 150%;
+            height: 100%;
+            overflow: visible;
+        }
+        .topo-svg-background path {
+            fill: none;
+            stroke: var(--text-primary);
+            stroke-width: 1;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            opacity: 0.7;
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: draw-line 10s linear infinite;
+        }
+        @keyframes draw-line {
+            to {
+                stroke-dashoffset: -1000;
+            }
+        }
+
+        /* --- Indicador Online y Decoraciones --- */
+        .online-indicator {
+            margin-top: 2rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            letter-spacing: 0.05em;
+        }
+        .online-indicator .light {
+            width: 8px;
+            height: 8px;
+            background-color: var(--online-color);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--online-color);
+            animation: blink 2s linear infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        .corner-decoration {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            opacity: 0.7; /* Aumentar opacidad */
+            z-index: 20;
+        }
+        .corner-decoration::before, .corner-decoration::after {
+            content: '';
+            position: absolute;
+            /* CORRECCIÓN: Usar variable de color blanco */
+            background-color: var(--hud-color); 
+        }
+        .corner-decoration::before { width: 100%; height: 1px; top: 50%; left: 0; transform: translateY(-50%); }
+        .corner-decoration::after { width: 1px; height: 100%; left: 50%; top: 0; transform: translateX(-50%); }
+        .top-left { top: 1rem; left: 1rem; }
+        .top-right { top: 1rem; right: 1rem; }
+        .bottom-left { bottom: 1rem; left: 1rem; }
+        .bottom-right { bottom: 1rem; right: 1rem; }
+
+    </style>
+</head>
+<body>
+
+    <!-- Pantalla de Bloqueo -->
+    <div id="lock-screen">
+        <div class="text-center">
+            <h1 id="lock-screen-time">12:00</h1>
+            <p id="lock-screen-date">martes, 22 de julio</p>
+        </div>
+        <div id="slider-container">
+            <div id="slider-handle">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+            </div>
+            <div id="slider-text">Deslizar</div>
+        </div>
+    </div>
+
+    <!-- Contenedor Principal con Snap Scroll -->
+    <div id="snap-container" class="snap-container">
+        
+        <!-- Sección 1: Bienvenida -->
+        <section id="welcome-view" class="snap-section">
+             <div class="section-content">
+                <h2 class="section-title">MySoul</h2>
+                <p class="section-description">Bienvenido a tu sistema operativo personal. Desliza para explorar tus módulos.</p>
+            </div>
+        </section>
+
+        <!-- Sección 2: F.O.C.O -->
+        <section id="foco-view" class="snap-section" data-href="index.html">
+            <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
+            <div class="section-container">
+                <div class="section-content">
+                    <h2 class="section-title">F.O.C.O</h2>
+                    <p class="section-description">Gestión de tareas y enfoque para maximizar tu productividad.</p>
+                    <div class="online-indicator"><div class="light"></div>[ En linea ]</div>
+                </div>
+                <div class="topo-svg-container">
+                    <svg class="topo-svg-background" viewBox="0 0 200 100" preserveAspectRatio="xMidYMax meet">
+                        <path style="animation-delay: -5s;" d="M -20,80 C 40,20 80,120 140,70 S 180,10 220,60" />
+                        <path style="animation-delay: -2s;" d="M -20,90 C 30,40 70,140 130,80 S 190,30 220,70" />
+                        <path style="animation-delay: 0s;" d="M -20,100 C 50,60 90,160 150,90 S 200,50 220,80" />
+                        <path style="animation-delay: -6s;" d="M -20,110 C 20,70 60,180 120,100 S 210,70 220,90" />
+                    </svg>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sección 3: MyYo -->
+        <section id="myyo-view" class="snap-section" data-href="my_yo.html">
+            <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
+            <div class="section-container">
+                <div class="section-content">
+                    <h2 class="section-title">MyYo</h2>
+                    <p class="section-description">Tu memoria extendida para organizar aficiones, ideas y listas.</p>
+                    <div class="online-indicator"><div class="light"></div>[ En linea ]</div>
+                </div>
+                <div class="topo-svg-container">
+                    <svg class="topo-svg-background" viewBox="0 0 200 100" preserveAspectRatio="xMidYMax meet">
+                        <path style="animation-delay: -7s;" d="M -20,100 C 20,80 40,120 60,100 C 80,80 100,120 120,100 C 140,80 160,120 180,100 C 200,80 220,120 240,100" />
+                        <path style="animation-delay: -3s;" d="M -20,90 C 20,70 40,110 60,90 C 80,70 100,110 120,90 C 140,70 160,110 180,90 C 200,70 220,110 240,90" />
+                        <path style="animation-delay: 0s;" d="M -20,80 C 20,60 40,100 60,80 C 80,60 100,100 120,80 C 140,60 160,100 180,80 C 200,60 220,100 240,80" />
+                        <path style="animation-delay: -1s;" d="M -20,70 C 20,50 40,90 60,70 C 80,50 100,90 120,70 C 140,50 160,90 180,70 C 200,50 220,90 240,70" />
+                    </svg>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sección 4: Ajustes -->
+        <section id="settings-view" class="snap-section" data-href="#">
+            <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
+            <div class="section-container">
+                <div class="section-content">
+                    <h2 class="section-title">Ajustes</h2>
+                    <p class="section-description">Calibra la interfaz y gestiona los datos de tu sistema.</p>
+                    <div class="online-indicator"><div class="light"></div>[ En linea ]</div>
+                </div>
+                <div class="topo-svg-container">
+                    <svg class="topo-svg-background" viewBox="0 0 200 100" preserveAspectRatio="xMidYMax meet">
+                        <path style="animation-delay: 0s;" d="M 10,100 L 100,20 L 190,100" />
+                        <path style="animation-delay: -2s;" d="M 25,100 L 100,35 L 175,100" />
+                        <path style="animation-delay: -8s;" d="M 40,100 L 100,50 L 160,100" />
+                        <path style="animation-delay: -6s;" d="M 55,100 L 100,65 L 145,100" />
+                        <path style="animation-delay: -4s;" d="M 70,100 L 100,80 L 130,100" />
+                    </svg>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Elementos del DOM ---
+            const lockScreen = document.getElementById('lock-screen');
+            const timeDisplay = document.getElementById('lock-screen-time');
+            const dateDisplay = document.getElementById('lock-screen-date');
+            const sliderHandle = document.getElementById('slider-handle');
+            const sliderContainer = document.getElementById('slider-container');
+            const sections = document.querySelectorAll('.snap-section');
+
+            // --- Reloj y Fecha ---
+            function updateClock() {
+                const now = new Date();
+                const timeString = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false });
+                const dateString = now.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+                timeDisplay.textContent = timeString;
+                dateDisplay.textContent = dateString.charAt(0).toUpperCase() + dateString.slice(1);
+            }
+
+            // --- Lógica de Desbloqueo ---
+            let isDragging = false;
+            let startX = 0;
+
+            function startDrag(e) {
+                isDragging = true;
+                startX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+                sliderHandle.style.cursor = 'grabbing';
+                sliderHandle.style.transition = 'none';
+            }
+
+            function onDrag(e) {
+                if (!isDragging) return;
+                e.preventDefault();
+                const currentX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+                let moveX = currentX - startX;
+                const maxMove = sliderContainer.offsetWidth - sliderHandle.offsetWidth;
+                
+                moveX = Math.max(0, Math.min(moveX, maxMove));
+                sliderHandle.style.transform = `translateX(${moveX}px)`;
+
+                if (moveX >= maxMove - 5) {
+                    unlock();
+                }
+            }
+
+            function endDrag() {
+                if (!isDragging) return;
+                isDragging = false;
+                sliderHandle.style.cursor = 'grab';
+                sliderHandle.style.transition = 'transform 0.3s ease';
+                sliderHandle.style.transform = 'translateX(0px)';
+            }
+
+            function unlock() {
+                if (!lockScreen.classList.contains('unlocked')) {
+                    lockScreen.classList.add('unlocked');
+                    isDragging = false; 
+                }
+            }
+
+            sliderHandle.addEventListener('mousedown', startDrag);
+            document.addEventListener('mousemove', onDrag);
+            document.addEventListener('mouseup', endDrag);
+            sliderHandle.addEventListener('touchstart', startDrag, { passive: false });
+            document.addEventListener('touchmove', onDrag, { passive: false });
+            document.addEventListener('touchend', endDrag);
+
+            // --- Lógica de Navegación y Animación ---
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    entry.target.classList.toggle('visible', entry.isIntersecting);
+                });
+            }, { threshold: 0.4 });
+
+            sections.forEach(section => {
+                observer.observe(section);
+                // Hacer toda la sección clickeable
+                section.addEventListener('click', () => {
+                    const href = section.dataset.href;
+                    if (!href || href === '#') {
+                        if (section.id === 'settings-view') {
+                           alert('Módulo de Ajustes en desarrollo.');
+                        }
+                        return;
+                    }
+                    section.classList.add('exiting');
+                    setTimeout(() => {
+                        window.location.href = href;
+                    }, 400);
+                });
+            });
+
+            // --- Inicialización ---
+            updateClock();
+            setInterval(updateClock, 1000);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+  "name": "FOCO by VitreumStudios: Gestión y Enfoque",
+  "short_name": "FOCO",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0C0A1A",
+  "theme_color": "#0C0A1A",
+  "description": "Una PWA para gestionar tus tareas, organizar tu horario y mejorar tu concentración.",
+  "icons": [
+    {
+      "src": "icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
