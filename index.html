@@ -332,20 +332,6 @@
     </div>
 
     <script>
-        // Registrar Service Worker
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                // CORRECCIÓN: Usar ruta relativa para el registro del SW
-                navigator.serviceWorker.register('sw.js')
-                    .then(registration => {
-                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                    })
-                    .catch(error => {
-                        console.log('ServiceWorker registration failed: ', error);
-                    });
-            });
-        }
-
         document.addEventListener('DOMContentLoaded', () => {
             // --- Elementos del DOM ---
             const lockScreen = document.getElementById('lock-screen');
@@ -441,6 +427,88 @@
             updateClock();
             setInterval(updateClock, 1000);
         });
+    </script>
+    
+    <!-- Service Worker Integrado -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            const swContent = `
+                // Define un nombre y una versión para tu caché.
+                const CACHE_NAME = 'mysoul-cache-v1.2'; // Incrementa la versión para forzar actualización
+
+                // Lista de archivos y recursos esenciales para que la app funcione sin conexión.
+                const urlsToCache = [
+                  './', 
+                  'index.html',
+                  'mytime.html',
+                  'mymemory.html',
+                  'style.css',
+                  'script.js',
+                  'manifest.json',
+                  'icons/icon-192x192.png',
+                  'icons/icon-512x512.png',
+                  'https://cdn.tailwindcss.com',
+                  'https://fonts.googleapis.com/css2?family=Bitcount+Prop+Single:wght@400;600&family=Inter:wght@300;400&display=swap',
+                  'https://fonts.googleapis.com/css2?family=Kdam+Thmor+Pro&family=Inter:wght@400;500;600;700&display=swap',
+                  'https://fonts.googleapis.com/css2?family=Bitcount+Prop+Single:wght@400;600&family=Inter:wght@300;400;500&display=swap',
+                  'https://raw.githubusercontent.com/lucasromerodb/liquid-glass-effect-macos/refs/heads/main/assets/flowers.jpg',
+                  'https://www.soundjay.com/nature/rain-light-2.mp3',
+                  'https://www.soundjay.com/nature/forest-reverb-1.mp3',
+                  'https://www.soundjay.com/nature/white-noise-1.mp3'
+                ];
+
+                self.addEventListener('install', event => {
+                  event.waitUntil(
+                    caches.open(CACHE_NAME)
+                      .then(cache => {
+                        console.log('Cache abierta y lista para guardar archivos.');
+                        return cache.addAll(urlsToCache);
+                      })
+                      .catch(error => {
+                        console.error('Falló el precaching de archivos:', error);
+                      })
+                  );
+                });
+
+                self.addEventListener('fetch', event => {
+                  event.respondWith(
+                    caches.match(event.request)
+                      .then(response => {
+                        return response || fetch(event.request);
+                      })
+                  );
+                });
+
+                self.addEventListener('activate', event => {
+                  const cacheWhitelist = [CACHE_NAME];
+                  event.waitUntil(
+                    caches.keys().then(cacheNames => {
+                      return Promise.all(
+                        cacheNames.map(cacheName => {
+                          if (cacheWhitelist.indexOf(cacheName) === -1) {
+                            console.log('Eliminando caché antigua:', cacheName);
+                            return caches.delete(cacheName);
+                          }
+                        })
+                      );
+                    })
+                  );
+                });
+            `;
+
+            // Crear un Blob a partir del contenido del Service Worker
+            const swBlob = new Blob([swContent], { type: 'application/javascript' });
+            const swUrl = URL.createObjectURL(swBlob);
+
+            // Registrar el Service Worker usando la URL del Blob
+            navigator.serviceWorker.register(swUrl)
+                .then(registration => {
+                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                })
+                .catch(error => {
+                    console.log('ServiceWorker registration failed: ', error);
+                });
+        }
     </script>
 </body>
 </html>
