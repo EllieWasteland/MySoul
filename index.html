@@ -5,16 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MySoul</title>
     
-    <!-- Metadatos para PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#000000">
     <link rel="apple-touch-icon" href="icons/icon-192x192.png">
 
-    <!-- Scripts y Fuentes Externas -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Bitcount+Prop+Single:wght@400;600&family=Inter:wght@300;400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bitcount+Prop+Single:wght@400;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
     
     <style>
         :root {
@@ -22,6 +20,7 @@
             --text-primary: #FFFFFF;
             --text-secondary: #a0a0a0;
             --border-color: rgba(255, 255, 255, 0.2);
+            --highlight-color: rgba(255, 255, 255, 0.05);
             --online-color: #00ff89;
             --hud-color: rgba(255, 255, 255, 0.7); 
         }
@@ -37,229 +36,92 @@
             background-size: 28px 28px;
         }
 
-        /* --- Pantalla de Bloqueo --- */
         #lock-screen {
-            position: fixed;
-            inset: 0;
-            z-index: 100;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: space-between;
-            padding: 4rem 2rem 2rem;
-            background-color: var(--bg-color);
-            transition: opacity 0.8s ease-out, visibility 0.8s;
+            position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column;
+            align-items: center; justify-content: space-between; padding: 4rem 2rem 2rem;
+            background-color: var(--bg-color); transition: opacity 0.8s ease-out, visibility 0.8s;
         }
-        #lock-screen.unlocked {
-            opacity: 0;
-            visibility: hidden;
-        }
-        #lock-screen-time {
-            font-family: 'Bitcount Prop Single', sans-serif;
-            font-size: 7rem;
-            font-weight: 400;
-            letter-spacing: -0.05em;
-        }
-        #lock-screen-date {
-            font-size: 1.25rem;
-            font-weight: 400;
-            color: var(--text-secondary);
-        }
-        #slider-container {
-            width: 100%;
-            max-width: 350px;
-            border: 1px solid var(--border-color);
-            border-radius: 9999px;
-            padding: 0.5rem;
-            position: relative;
-            overflow: hidden;
-        }
-        #slider-text {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 100%;
-            text-align: center;
-            font-weight: 500;
-            letter-spacing: 1px;
-            pointer-events: none;
-            z-index: 1;
-        }
-        #slider-handle {
-            width: 50px;
-            height: 50px;
-            background: var(--text-primary);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: grab;
-            position: relative;
-            z-index: 2;
-        }
+        #lock-screen.unlocked { opacity: 0; visibility: hidden; }
+        #lock-screen-time { font-family: 'Bitcount Prop Single', sans-serif; font-size: 7rem; font-weight: 400; letter-spacing: -0.05em; }
+        #lock-screen-date { font-size: 1.25rem; font-weight: 400; color: var(--text-secondary); }
+        #slider-container { width: 100%; max-width: 350px; border: 1px solid var(--border-color); border-radius: 9999px; padding: 0.5rem; position: relative; overflow: hidden; }
+        #slider-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; text-align: center; font-weight: 500; letter-spacing: 1px; pointer-events: none; z-index: 1; }
+        #slider-handle { width: 50px; height: 50px; background: var(--text-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: grab; position: relative; z-index: 2; }
         #slider-handle:active { cursor: grabbing; }
 
-        /* --- Contenedor Principal --- */
-        .snap-container {
-            scroll-snap-type: y mandatory;
-            height: 100vh;
-            overflow-y: scroll;
-            scroll-behavior: smooth;
-        }
-        .snap-section {
-            scroll-snap-align: start;
-            height: 100vh;
-            width: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 2rem;
-            position: relative;
-            cursor: pointer;
-            opacity: 0;
-            transition: opacity 1s ease;
-        }
-        .snap-section.visible {
-            opacity: 1;
-        }
-        .snap-section.exiting .section-container {
-            opacity: 0;
-            transform: scale(1.1);
-            transition: opacity 0.4s ease, transform 0.4s ease;
-        }
+        .snap-container { scroll-snap-type: y mandatory; height: 100vh; overflow-y: scroll; scroll-behavior: smooth; }
+        .snap-section { scroll-snap-align: start; height: 100vh; width: 100%; display: flex; align-items: center; justify-content: center; padding: 2rem; position: relative; cursor: pointer; opacity: 0; transition: opacity 1s ease; }
+        .snap-section.visible { opacity: 1; }
+        .snap-section.exiting .section-container { opacity: 0; transform: scale(1.1); transition: opacity 0.4s ease, transform 0.4s ease; }
 
-        /* --- Contenido de las Secciones --- */
-        .section-container {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            align-items: center;
-            transition: opacity 0.4s ease, transform 0.4s ease;
-        }
-        .section-content {
-            text-align: center;
-            width: 100%;
-            max-width: 600px;
-            padding-top: 10vh;
-            opacity: 0;
-            transform: translateY(20px);
-            animation: content-fade-in 0.8s 0.2s forwards;
-        }
-        @keyframes content-fade-in {
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        .section-title {
-            font-family: 'Bitcount Prop Single', sans-serif;
-            font-size: 5rem;
-            font-weight: 600;
-            letter-spacing: -0.03em;
-            line-height: 1;
-            color: var(--text-primary);
-            transition: font-size 0.3s ease;
-        }
-        .section-description {
-            font-size: 1.125rem;
-            color: var(--text-secondary);
-            margin-top: 1rem;
-        }
+        .section-container { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between; align-items: center; transition: opacity 0.4s ease, transform 0.4s ease; }
+        .section-content { text-align: center; width: 100%; max-width: 600px; padding-top: 10vh; opacity: 0; transform: translateY(20px); animation: content-fade-in 0.8s 0.2s forwards; }
+        @keyframes content-fade-in { to { opacity: 1; transform: translateY(0); } }
+        .section-title { font-family: 'Bitcount Prop Single', sans-serif; font-size: 5rem; font-weight: 600; letter-spacing: -0.03em; line-height: 1; color: var(--text-primary); transition: font-size 0.3s ease; }
+        .section-description { font-size: 1.125rem; color: var(--text-secondary); margin-top: 1rem; }
         
-        /* CORRECCIÓN: Media query para hacer el título más pequeño en móviles */
         @media (max-width: 640px) {
-            .section-title {
-                font-size: 3.5rem;
-            }
-            #lock-screen-time {
-                font-size: 5rem;
-            }
-            #lock-screen-date {
-                font-size: 1rem;
-            }
+            .section-title { font-size: 3.5rem; }
+            #lock-screen-time { font-size: 5rem; }
+            #lock-screen-date { font-size: 1rem; }
         }
 
-        /* --- SVGs Topográficos --- */
-        .topo-svg-container {
-            width: 100%;
-            height: 40vh;
-            display: flex;
-            align-items: flex-end;
-            justify-content: center;
-            overflow: hidden;
-        }
-        .topo-svg-background {
-            width: 150%;
-            height: 100%;
-            overflow: visible;
-        }
-        .topo-svg-background path {
-            fill: none;
-            stroke: var(--text-primary);
-            stroke-width: 1;
-            stroke-linecap: round;
-            stroke-linejoin: round;
-            opacity: 0.7;
-            stroke-dasharray: 1000;
-            stroke-dashoffset: 1000;
-            animation: draw-line 10s linear infinite;
-        }
-        @keyframes draw-line {
-            to {
-                stroke-dashoffset: -1000;
-            }
-        }
+        .topo-svg-container { width: 100%; height: 40vh; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; }
+        .topo-svg-background { width: 150%; height: 100%; overflow: visible; }
+        .topo-svg-background path { fill: none; stroke: var(--text-primary); stroke-width: 1; stroke-linecap: round; stroke-linejoin: round; opacity: 0.7; stroke-dasharray: 1000; stroke-dashoffset: 1000; animation: draw-line 10s linear infinite; }
+        @keyframes draw-line { to { stroke-dashoffset: -1000; } }
 
-        /* --- Indicador Online y Decoraciones --- */
-        .online-indicator {
-            margin-top: 2rem;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.875rem;
-            color: var(--text-primary);
-            letter-spacing: 0.05em;
-        }
-        .online-indicator .light {
-            width: 8px;
-            height: 8px;
-            background-color: var(--online-color);
-            border-radius: 50%;
-            box-shadow: 0 0 8px var(--online-color);
-            animation: blink 2s linear infinite;
-        }
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
-        }
-        .corner-decoration {
-            position: absolute;
-            width: 12px;
-            height: 12px;
-            opacity: 0.7;
-            z-index: 20;
-        }
-        .corner-decoration::before, .corner-decoration::after {
-            content: '';
-            position: absolute;
-            background-color: var(--hud-color); 
-        }
+        .online-indicator { margin-top: 2rem; display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; color: var(--text-primary); letter-spacing: 0.05em; }
+        .online-indicator .light { width: 8px; height: 8px; background-color: var(--online-color); border-radius: 50%; box-shadow: 0 0 8px var(--online-color); animation: blink 2s linear infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .corner-decoration { position: absolute; width: 12px; height: 12px; opacity: 0.7; z-index: 20; }
+        .corner-decoration::before, .corner-decoration::after { content: ''; position: absolute; background-color: var(--hud-color); }
         .corner-decoration::before { width: 100%; height: 1px; top: 50%; left: 0; transform: translateY(-50%); }
         .corner-decoration::after { width: 1px; height: 100%; left: 50%; top: 0; transform: translateX(-50%); }
-        .top-left { top: 1rem; left: 1rem; }
-        .top-right { top: 1rem; right: 1rem; }
-        .bottom-left { bottom: 1rem; left: 1rem; }
-        .bottom-right { bottom: 1rem; right: 1rem; }
-
+        .top-left { top: 1rem; left: 1rem; } .top-right { top: 1rem; right: 1rem; } .bottom-left { bottom: 1rem; left: 1rem; } .bottom-right { bottom: 1rem; right: 1rem; }
+        
+        /* --- ESTILOS DE BOTONES (COMO EN MYMEMORY) --- */
+        .hud-item {
+            position: relative;
+            border: 1px solid var(--border-color);
+            padding: 0;
+            transition: border-color 0.3s, background-color 0.3s;
+        }
+        .hud-item > .hud-button {
+            width: 100%;
+            height: 100%;
+            padding: 0.75rem 1.5rem;
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            font-weight: 500;
+            background: transparent;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+        .hud-item:hover {
+            background-color: var(--highlight-color);
+            border-color: var(--text-primary);
+        }
+        .hud-item .corner-decoration { 
+            width: 8px; 
+            height: 8px; 
+            background-color: transparent; 
+        }
+        .hud-item .corner-decoration::before, .hud-item .corner-decoration::after { 
+            background-color: var(--border-color); 
+            transition: background-color 0.3s; 
+        }
+        .hud-item:hover .corner-decoration::before, .hud-item:hover .corner-decoration::after { 
+            background-color: var(--text-primary); 
+        }
+        .hud-item > .top-left { top: -1px; left: -1px; } 
+        .hud-item > .top-right { top: -1px; right: -1px; }
+        .hud-item > .bottom-left { bottom: -1px; left: -1px; } 
+        .hud-item > .bottom-right { bottom: -1px; right: -1px; }
     </style>
 </head>
 <body>
 
-    <!-- Pantalla de Bloqueo -->
     <div id="lock-screen">
         <div class="text-center">
             <h1 id="lock-screen-time">12:00</h1>
@@ -273,10 +135,8 @@
         </div>
     </div>
 
-    <!-- Contenedor Principal con Snap Scroll -->
     <div id="snap-container" class="snap-container">
         
-        <!-- Sección 1: Bienvenida -->
         <section id="welcome-view" class="snap-section">
              <div class="section-content">
                 <h2 class="section-title">MySoul</h2>
@@ -284,7 +144,6 @@
             </div>
         </section>
 
-        <!-- Sección 2: MyTime (antes F.O.C.O) -->
         <section id="mytime-view" class="snap-section" data-href="mytime.html">
             <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
             <div class="section-container">
@@ -304,7 +163,6 @@
             </div>
         </section>
 
-        <!-- Sección 3: MyMemory (antes MyYo) -->
         <section id="mymemory-view" class="snap-section" data-href="mymemory.html">
             <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
             <div class="section-container">
@@ -324,14 +182,24 @@
             </div>
         </section>
 
-        <!-- Sección 4: Ajustes -->
-        <section id="settings-view" class="snap-section" data-href="#">
+        <section id="settings-view" class="snap-section">
             <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
             <div class="section-container">
                 <div class="section-content">
                     <h2 class="section-title">Ajustes</h2>
-                    <p class="section-description">Calibra la interfaz y gestiona los datos de tu sistema.</p>
-                    <div class="online-indicator"><div class="light"></div>[ En linea ]</div>
+                    <p class="section-description">Gestiona los datos de tu sistema operativo personal.</p>
+                    <!-- BOTONES CORREGIDOS -->
+                    <div class="mt-8 space-y-4 max-w-sm mx-auto">
+                        <div class="hud-item">
+                            <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
+                            <button id="export-data-btn" class="hud-button">Exportar Datos Unificados</button>
+                        </div>
+                        <input type="file" id="import-file-input" class="hidden" accept=".json">
+                        <div class="hud-item">
+                            <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
+                            <button id="import-data-btn" class="hud-button">Importar Datos</button>
+                        </div>
+                    </div>
                 </div>
                 <div class="topo-svg-container">
                     <svg class="topo-svg-background" viewBox="0 0 200 100" preserveAspectRatio="xMidYMax meet">
@@ -347,17 +215,22 @@
 
     </div>
 
+    <!-- Incluir el gestor de datos -->
+    <script src="data-manager.js"></script>
+    
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // --- Elementos del DOM ---
             const lockScreen = document.getElementById('lock-screen');
             const timeDisplay = document.getElementById('lock-screen-time');
             const dateDisplay = document.getElementById('lock-screen-date');
             const sliderHandle = document.getElementById('slider-handle');
             const sliderContainer = document.getElementById('slider-container');
             const sections = document.querySelectorAll('.snap-section');
+            
+            const exportBtn = document.getElementById('export-data-btn');
+            const importBtn = document.getElementById('import-data-btn');
+            const importFileInput = document.getElementById('import-file-input');
 
-            // --- Reloj y Fecha ---
             function updateClock() {
                 const now = new Date();
                 const timeString = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false });
@@ -366,46 +239,12 @@
                 dateDisplay.textContent = dateString.charAt(0).toUpperCase() + dateString.slice(1);
             }
 
-            // --- Lógica de Desbloqueo ---
             let isDragging = false;
             let startX = 0;
-
-            function startDrag(e) {
-                isDragging = true;
-                startX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
-                sliderHandle.style.cursor = 'grabbing';
-                sliderHandle.style.transition = 'none';
-            }
-
-            function onDrag(e) {
-                if (!isDragging) return;
-                e.preventDefault();
-                const currentX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
-                let moveX = currentX - startX;
-                const maxMove = sliderContainer.offsetWidth - sliderHandle.offsetWidth;
-                
-                moveX = Math.max(0, Math.min(moveX, maxMove));
-                sliderHandle.style.transform = `translateX(${moveX}px)`;
-
-                if (moveX >= maxMove - 5) {
-                    unlock();
-                }
-            }
-
-            function endDrag() {
-                if (!isDragging) return;
-                isDragging = false;
-                sliderHandle.style.cursor = 'grab';
-                sliderHandle.style.transition = 'transform 0.3s ease';
-                sliderHandle.style.transform = 'translateX(0px)';
-            }
-
-            function unlock() {
-                if (!lockScreen.classList.contains('unlocked')) {
-                    lockScreen.classList.add('unlocked');
-                    isDragging = false; 
-                }
-            }
+            function startDrag(e) { isDragging = true; startX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX; sliderHandle.style.cursor = 'grabbing'; sliderHandle.style.transition = 'none'; }
+            function onDrag(e) { if (!isDragging) return; e.preventDefault(); const currentX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX; let moveX = currentX - startX; const maxMove = sliderContainer.offsetWidth - sliderHandle.offsetWidth; moveX = Math.max(0, Math.min(moveX, maxMove)); sliderHandle.style.transform = `translateX(${moveX}px)`; if (moveX >= maxMove - 5) { unlock(); } }
+            function endDrag() { if (!isDragging) return; isDragging = false; sliderHandle.style.cursor = 'grab'; sliderHandle.style.transition = 'transform 0.3s ease'; sliderHandle.style.transform = 'translateX(0px)'; }
+            function unlock() { if (!lockScreen.classList.contains('unlocked')) { lockScreen.classList.add('unlocked'); isDragging = false; } }
 
             sliderHandle.addEventListener('mousedown', startDrag);
             document.addEventListener('mousemove', onDrag);
@@ -414,7 +253,6 @@
             document.addEventListener('touchmove', onDrag, { passive: false });
             document.addEventListener('touchend', endDrag);
 
-            // --- Lógica de Navegación y Animación ---
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
                     entry.target.classList.toggle('visible', entry.isIntersecting);
@@ -423,107 +261,85 @@
 
             sections.forEach(section => {
                 observer.observe(section);
-                // Hacer toda la sección clickeable
-                section.addEventListener('click', () => {
-                    const href = section.dataset.href;
-                    if (!href || href === '#') {
-                        if (section.id === 'settings-view') {
-                           alert('Módulo de Ajustes en desarrollo.');
-                        }
-                        return;
-                    }
-                    section.classList.add('exiting');
-                    setTimeout(() => {
-                        window.location.href = href;
-                    }, 400);
-                });
+                if (section.dataset.href) {
+                     section.addEventListener('click', () => {
+                        const href = section.dataset.href;
+                        section.classList.add('exiting');
+                        setTimeout(() => { window.location.href = href; }, 400);
+                    });
+                }
+            });
+            
+            exportBtn.addEventListener('click', () => {
+                const data = getUnifiedData();
+                const dataStr = JSON.stringify(data, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'mysoul_backup.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                alert('Datos exportados con éxito.');
             });
 
-            // --- Inicialización ---
+            importBtn.addEventListener('click', () => importFileInput.click());
+            importFileInput.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const importedData = JSON.parse(e.target.result);
+                        if (confirm('¿Estás seguro de que quieres sobreescribir todos tus datos actuales? Esta acción no se puede deshacer.')) {
+                            saveUnifiedData(importedData);
+                            alert('Datos importados con éxito. La página se recargará.');
+                            window.location.reload();
+                        }
+                    } catch (error) {
+                        alert('Error al importar el archivo. Asegúrate de que es un archivo de guardado válido.');
+                        console.error("Error al parsear el archivo JSON importado:", error);
+                    }
+                };
+                reader.readAsText(file);
+                event.target.value = '';
+            });
+
             updateClock();
             setInterval(updateClock, 1000);
         });
     </script>
     
-    <!-- Service Worker Integrado -->
     <script>
         if ('serviceWorker' in navigator) {
             const swContent = `
-                // Define un nombre y una versión para tu caché.
-                const CACHE_NAME = 'mysoul-cache-v1.4'; // Incrementa la versión para forzar actualización
-
-                // Lista de archivos y recursos esenciales para que la app funcione sin conexión.
+                const CACHE_NAME = 'mysoul-cache-v1.5';
                 const urlsToCache = [
-                  './', 
-                  'index.html',
-                  'mytime.html',
-                  'mymemory.html',
-                  'style.css',
-                  'script.js',
-                  'manifest.json',
-                  'icons/icon-192x192.png',
-                  'icons/icon-512x512.png',
+                  './', 'index.html', 'mytime.html', 'mymemory.html',
+                  'style.css', 'script.js', 'data-manager.js', 'manifest.json',
+                  'icons/icon-192x192.png', 'icons/icon-512x512.png',
                   'https://cdn.tailwindcss.com',
                   'https://fonts.googleapis.com/css2?family=Bitcount+Prop+Single:wght@400;600&family=Inter:wght@300;400&display=swap',
                   'https://fonts.googleapis.com/css2?family=Kdam+Thmor+Pro&family=Inter:wght@400;500;600;700&display=swap',
-                  'https://fonts.googleapis.com/css2?family=Bitcount+Prop+Single:wght@400;600&family=Inter:wght@300;400;500&display=swap',
                   'https://raw.githubusercontent.com/lucasromerodb/liquid-glass-effect-macos/refs/heads/main/assets/flowers.jpg',
                   'https://www.soundjay.com/nature/rain-light-2.mp3',
                   'https://www.soundjay.com/nature/forest-reverb-1.mp3',
                   'https://www.soundjay.com/nature/white-noise-1.mp3'
                 ];
-
-                self.addEventListener('install', event => {
-                  event.waitUntil(
-                    caches.open(CACHE_NAME)
-                      .then(cache => {
-                        console.log('Cache abierta y lista para guardar archivos.');
-                        return cache.addAll(urlsToCache);
-                      })
-                      .catch(error => {
-                        console.error('Falló el precaching de archivos:', error);
-                      })
-                  );
-                });
-
-                self.addEventListener('fetch', event => {
-                  event.respondWith(
-                    caches.match(event.request)
-                      .then(response => {
-                        return response || fetch(event.request);
-                      })
-                  );
-                });
-
-                self.addEventListener('activate', event => {
+                self.addEventListener('install', e => e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(urlsToCache).catch(err => console.error('Failed to cache', err)))));
+                self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r => r || fetch(e.request))));
+                self.addEventListener('activate', e => {
                   const cacheWhitelist = [CACHE_NAME];
-                  event.waitUntil(
-                    caches.keys().then(cacheNames => {
-                      return Promise.all(
-                        cacheNames.map(cacheName => {
-                          if (cacheWhitelist.indexOf(cacheName) === -1) {
-                            console.log('Eliminando caché antigua:', cacheName);
-                            return caches.delete(cacheName);
-                          }
-                        })
-                      );
-                    })
-                  );
+                  e.waitUntil(caches.keys().then(names => Promise.all(names.map(name => {
+                    if (cacheWhitelist.indexOf(name) === -1) return caches.delete(name);
+                  }))));
                 });
             `;
-
-            // Crear un Blob a partir del contenido del Service Worker
             const swBlob = new Blob([swContent], { type: 'application/javascript' });
             const swUrl = URL.createObjectURL(swBlob);
-
-            // Registrar el Service Worker usando la URL del Blob
-            navigator.serviceWorker.register(swUrl)
-                .then(registration => {
-                    console.log('ServiceWorker registration successful with scope: ', registration.scope);
-                })
-                .catch(error => {
-                    console.log('ServiceWorker registration failed: ', error);
-                });
+            navigator.serviceWorker.register(swUrl).then(reg => console.log('SW registered!', reg)).catch(err => console.log('SW registration failed: ', err));
         }
     </script>
 </body>

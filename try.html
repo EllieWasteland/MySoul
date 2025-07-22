@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F.O.C.O - Versión Final</title>
+    
+    <!-- Metadatos para PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0A0A14">
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+    
+    <!-- Scripts y Fuentes Externas -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kdam+Thmor+Pro&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Hoja de Estilos Modificada -->
+    <style>
+        :root {
+            --text-primary: #EAEAEA;
+            --text-secondary: #A0A0A0;
+            --accent-primary: #00F0FF;
+            --danger-color: #FF4757;
+            --bg-primary: #0A0A14;
+            --bg-secondary: #1C1C24;
+            --border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            padding: 0;
+            margin: 0;
+            background-color: var(--bg-primary);
+            background-image: 
+                radial-gradient(circle at 1px 1px, rgba(255,255,255,0.1) 1px, transparent 0);
+            background-size: 2rem 2rem;
+            font-family: 'Inter', sans-serif;
+            color: var(--text-primary);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            transition: background-image 0.5s ease-in-out;
+            overflow: hidden;
+        }
+
+        /* --- ONBOARDING / SETUP --- */
+        #onboarding-container {
+            position: fixed;
+            inset: 0;
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(10, 10, 20, 0.85);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            transition: opacity 0.5s ease-in-out, visibility 0.5s ease-in-out;
+        }
+
+        #onboarding-ripple {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background-color: var(--accent-primary);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 210;
+        }
+        #onboarding-ripple.animate {
+            animation: ripple-out 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        }
+        @keyframes ripple-out {
+            from { width: 0; height: 0; }
+            to { width: 250vmax; height: 250vmax; }
+        }
+
+        .flat-pane {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 0; /* Bordes afilados */
+            padding: 2rem;
+            width: 90%;
+            max-width: 600px;
+            position: relative;
+            overflow: hidden;
+            min-height: 500px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .onboarding-step {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(20px);
+            transition: opacity 0.4s ease, transform 0.4s ease, visibility 0.4s;
+        }
+        .onboarding-step.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .fingerprint-scanner {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: transparent;
+            border: 2px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            cursor: pointer;
+            transition: background-color 0.3s, border-color 0.3s;
+            outline: none;
+        }
+        .fingerprint-icon { color: var(--accent-primary); transition: color 0.3s; }
+        .fingerprint-circle {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: var(--accent-primary);
+            transform: scale(0);
+            transition: transform 0.3s ease;
+            z-index: -1;
+        }
+        .fingerprint-scanner:hover { border-color: var(--accent-primary); }
+        .fingerprint-scanner.scanning .fingerprint-icon { color: var(--bg-primary); }
+        .fingerprint-scanner.scanning .fingerprint-circle { transform: scale(1); }
+
+        .tutorial-card-stack {
+            position: relative;
+            width: 90%;
+            max-width: 350px;
+            height: 250px;
+        }
+        .tutorial-card {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: #111119;
+            border: 1px solid var(--border-color);
+            border-radius: 0;
+            padding: 1.5rem;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.5s ease-in-out, opacity 0.5s ease-in-out;
+            cursor: pointer;
+        }
+        #tutorial-card-1 { transform: rotate(0deg) translateY(0); z-index: 4; }
+        #tutorial-card-2 { transform: rotate(-5deg) translateY(-10px); z-index: 3; }
+        #tutorial-card-3 { transform: rotate(5deg) translateY(-20px); z-index: 2; }
+        #tutorial-card-4 { transform: rotate(-8deg) translateY(-30px); z-index: 1; }
+        .tutorial-card.dismissed {
+            transform: translateY(-100vh) rotate(30deg) !important;
+            opacity: 0;
+        }
+
+        /* --- MAIN APP UI --- */
+        #main-app-ui {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #app-container {
+            scroll-snap-type: y mandatory;
+            overflow-y: scroll;
+            height: 100vh;
+        }
+        .view {
+            scroll-snap-align: start;
+            height: 100vh;
+            width: 100%;
+            padding: 0 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            overflow-y: hidden;
+            position: relative;
+        }
+        .view-content {
+            width: 100%;
+            max-width: 900px;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            padding-top: 2rem;
+            padding-bottom: 2rem;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+        #hidden-views-container, .hidden-view {
+            position: fixed; inset: 0; pointer-events: none; z-index: 150;
+        }
+        .hidden-view {
+            background-color: rgba(10, 10, 20, 0.9);
+            opacity: 0; transition: opacity 0.3s ease-in-out;
+            display: flex; align-items: center; justify-content: center; padding: 1rem;
+        }
+        .hidden-view.active { opacity: 1; pointer-events: auto; }
+
+        /* --- MODERN SETTINGS --- */
+        .settings-card {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 0;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+        .settings-card:hover {
+            border-color: var(--accent-primary);
+            background-color: rgba(0, 240, 255, 0.05);
+        }
+        .settings-card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            color: var(--accent-primary);
+        }
+        .settings-card-header svg {
+            width: 24px;
+            height: 24px;
+        }
+        .settings-card.border-danger-color { border-color: var(--danger-color); }
+        .settings-card.border-danger-color:hover { border-color: var(--danger-color); background-color: rgba(255, 71, 87, 0.05); }
+        .settings-card-header.text-danger-color { color: var(--danger-color); }
+
+
+        /* --- GENERAL COMPONENTS --- */
+        .flat-pane {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 0;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+            color: var(--text-primary);
+        }
+        .btn {
+            padding: 0.75rem 1.5rem; border-radius: 0; font-weight: 600;
+            color: var(--text-primary); background: transparent;
+            border: 1px solid var(--border-color); transition: all 0.3s ease; cursor: pointer;
+            text-transform: uppercase;
+        }
+        .btn:hover { background: var(--accent-primary); color: var(--bg-primary); border-color: var(--accent-primary); }
+        .btn-primary { background: var(--accent-primary); color: var(--bg-primary); border-color: var(--accent-primary); }
+        .btn-primary:hover { filter: brightness(1.2); }
+        .btn-danger { background: var(--danger-color); color: var(--text-primary); border-color: var(--danger-color); }
+        .btn-danger:hover { filter: brightness(1.2); }
+        .btn-icon { padding: 0.75rem; border-radius: 0; display: flex; align-items: center; justify-content: center; }
+        .font-heading { font-family: 'Kdam Thmor Pro', sans-serif; }
+        .text-secondary { color: var(--text-secondary); }
+        .text-on-bg { text-shadow: none; }
+        .scroll-arrow {
+            position: relative; color: var(--text-primary); display: flex; flex-direction: column;
+            align-items: center; gap: 0.5rem; cursor: pointer; z-index: 10; opacity: 0.7;
+            transition: opacity 0.3s ease, transform 0.3s ease; padding-bottom: 2rem; flex-shrink: 0;
+        }
+        .scroll-arrow:hover { opacity: 1; transform: translateY(5px); }
+        .scroll-arrow span { font-weight: 600; }
+        .scroll-arrow svg { animation: bounce 2s infinite; }
+        @keyframes bounce { 0%, 20%, 50%, 80%, 100% { transform: translateY(0); } 40% { transform: translateY(-10px); } 60% { transform: translateY(-5px); } }
+        #fab-add-task {
+            position: fixed; bottom: 2rem; right: 2rem; width: 4rem; height: 4rem;
+            border-radius: 0; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.5); z-index: 50;
+        }
+        #fab-add-task:hover { transform: scale(1.05); box-shadow: 0 0 25px rgba(0, 240, 255, 0.7); }
+        .task-card {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            border-left: 5px solid transparent;
+            transition: transform 0.3s ease, background-color 0.3s ease, border-color 0.3s ease;
+            border-radius: 0;
+        }
+        .task-card:hover { transform: translateY(-3px); background-color: rgba(255,255,255,0.03); }
+        .task-card.priority-high { border-left-color: var(--danger-color); }
+        .task-card.priority-medium { border-left-color: #FFC300; }
+        .task-card.priority-low { border-left-color: #4CAF50; }
+        .focus-card { border: 2px solid var(--accent-primary); box-shadow: 0 0 15px rgba(0, 240, 255, 0.3); }
+        .input-field {
+            background: rgba(0, 0, 0, 0.25); color: var(--text-primary);
+            border: 1px solid var(--border-color); border-radius: 0;
+            padding: 0.75rem 1rem; width: 100%; transition: all 0.3s ease;
+        }
+        .input-field:focus {
+            outline: none; background: rgba(0, 0, 0, 0.35);
+            border-color: var(--accent-primary);
+        }
+        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        input[type="color"]::-webkit-color-swatch { border: none; border-radius: 0; }
+        .tag {
+            background-color: var(--accent-primary); color: var(--bg-primary); padding: 0.25rem 0.75rem;
+            border-radius: 0; font-size: 0.75rem; font-weight: bold;
+        }
+        .subtask-item.dragging { opacity: 0.5; background: rgba(0, 240, 255, 0.2); }
+        .drag-handle { cursor: move; touch-action: none; }
+        .modal-overlay {
+            position: fixed; inset: 0; background-color: rgba(0,0,0,0.8);
+            display: flex; align-items: center; justify-content: center; z-index: 160;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal-content { transform: scale(0.9); transition: transform 0.3s ease; }
+        .modal-overlay.active .modal-content { transform: scale(1); }
+
+        /* --- ZEN MODE --- */
+        #zen-view {
+            position: fixed; inset: 0; z-index: 170; background-color: rgba(10, 10, 20, 0.95);
+            opacity: 0; pointer-events: none; transition: opacity 0.5s ease;
+            display: flex; align-items: center; justify-content: center;
+        }
+        #zen-view.active { opacity: 1; pointer-events: auto; }
+        #zen-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 171; }
+        #zen-border-clock { position: absolute; inset: 0; pointer-events: none; z-index: 172; }
+        .border-segment {
+            position: absolute; background-color: var(--accent-primary);
+            box-shadow: 0 0 10px var(--accent-primary), 0 0 20px var(--accent-primary);
+            transition: width 0.5s linear, height 0.5s linear;
+        }
+        #border-top { top: 0; left: 0; height: 2px; width: 0; }
+        #border-right { top: 0; right: 0; width: 2px; height: 0; }
+        #border-bottom { bottom: 0; right: 0; height: 2px; width: 0; }
+        #border-left { bottom: 0; left: 0; width: 2px; height: 0; }
+        #zen-timer-container { width: 320px; height: 320px; position: relative; z-index: 175; }
+        #zen-progress-svg { transform: rotate(-90deg); }
+        #zen-progress-ring { transition: stroke-dashoffset 1s linear, stroke 0.5s ease; filter: drop-shadow(0 0 5px var(--accent-primary)); }
+        #zen-timer-display { line-height: 1; }
+        #zen-controls {
+            position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%);
+            z-index: 180; display: flex; gap: 1rem; align-items: center;
+        }
+        #zen-sound-popup {
+            position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%);
+            opacity: 0; visibility: hidden; transition: all 0.3s ease;
+            padding: 1rem; width: 250px;
+            background: var(--bg-secondary); border: 1px solid var(--border-color);
+        }
+        #zen-sound-controls:hover #zen-sound-popup { opacity: 1; visibility: visible; }
+        #achievement-toast {
+            position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%);
+            z-index: 190; transition: bottom 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            padding: 1rem;
+            background: var(--bg-secondary); border: 1px solid var(--border-color);
+        }
+        #achievement-toast.show { bottom: 80px; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background-color: rgba(0, 240, 255, 0.5); border-radius: 0; }
+        ::-webkit-scrollbar-thumb:hover { background-color: var(--accent-primary); }
+        #calendar-grid {
+            display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.25rem; text-align: center;
+        }
+        #calendar-grid > div { padding: 0.5rem; border-radius: 0; cursor: pointer; transition: background-color 0.3s; border: 1px solid transparent; }
+        #calendar-grid > div.has-task { font-weight: bold; position: relative; }
+        #calendar-grid > div.has-task::after {
+            content: ''; position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%);
+            width: 4px; height: 4px; background-color: var(--accent-primary);
+        }
+        #calendar-grid > div:hover { background-color: rgba(0, 240, 255, 0.1); }
+        #calendar-grid > div.selected { background-color: var(--accent-primary); color: var(--bg-primary); }
+        #calendar-grid > div.today { border: 1px solid var(--accent-primary); }
+        #schedule-list-container .schedule-day-group { margin-bottom: 2.5rem; }
+    </style>
+</head>
+<body>
+
+    <!-- Contenedor del Onboarding -->
+    <section id="onboarding-container">
+        <div id="onboarding-ripple"></div>
+        <div class="flat-pane">
+            <!-- Paso 1: Nombre -->
+            <div id="setup-step-1" class="onboarding-step active">
+                <div class="w-full max-w-xl text-center">
+                    <h1 class="font-heading text-4xl md:text-6xl uppercase mb-4 text-white">Bienvenido a F.O.C.O</h1>
+                    <p class="text-lg md:text-xl mb-12 max-w-2xl mx-auto text-secondary">Para empezar, dinos cómo te llamas.</p>
+                    <form id="setup-form" class="w-full max-w-sm mx-auto">
+                        <input type="text" id="username-input" class="input-field text-center text-2xl mb-8" placeholder="Escribe tu nombre aquí..." required>
+                        <button type="submit" class="btn btn-primary w-full text-xl md:text-2xl">Siguiente</button>
+                    </form>
+                </div>
+            </div>
+            <!-- Paso 2: Compromiso -->
+            <div id="setup-step-2" class="onboarding-step">
+                <div class="w-full max-w-2xl text-center">
+                    <h2 class="font-heading text-3xl md:text-4xl uppercase mb-6">Mi Compromiso</h2>
+                    <p class="text-lg md:text-xl mb-8 text-secondary">Yo, <span id="commitment-name" class="font-bold text-white"></span>, me comprometo a utilizar F.O.C.O como mi herramienta para cultivar la disciplina, gestionar mi tiempo con intención y alcanzar mis metas. Cada tarea completada es un paso hacia mi mejor versión.</p>
+                    <p class="text-base mb-10 text-secondary">Mantén presionado para sellar tu compromiso.</p>
+                    <button id="fingerprint-btn" class="fingerprint-scanner">
+                        <svg class="fingerprint-icon" xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12a2 2 0 1 0 4 0v-2a6 6 0 1 0-8 5.66"/><path d="M12 12a2 2 0 1 0 4 0v-2a6 6 0 1 0-8 5.66"/><path d="M12 2a4 4 0 1 0 8 0"/><path d="M18 12h.01"/><path d="M6 12h.01"/><path d="M6 18h.01"/><path d="M21.99 12.5a6.5 6.5 0 0 0-11.49 4.49"/><path d="M3.5 14.5a6.5 6.5 0 0 0 11.49 4.49"/></svg>
+                        <div class="fingerprint-circle"></div>
+                    </button>
+                </div>
+            </div>
+            <!-- Paso 3: Tutorial -->
+            <div id="setup-step-3" class="onboarding-step tutorial-step">
+                <h2 class="font-heading text-3xl md:text-4xl uppercase mb-8 text-center">Un Vistazo Rápido</h2>
+                <div class="tutorial-card-stack">
+                    <div class="tutorial-card" id="tutorial-card-4">
+                        <h3 class="font-heading text-2xl uppercase mb-2">Ajustes</h3>
+                        <p>Personaliza tu experiencia, colores, fondos y gestiona tus datos.</p>
+                    </div>
+                    <div class="tutorial-card" id="tutorial-card-3">
+                        <h3 class="font-heading text-2xl uppercase mb-2">Calendario</h3>
+                        <p>Visualiza tus tareas en una vista mensual y planifica a futuro.</p>
+                    </div>
+                    <div class="tutorial-card" id="tutorial-card-2">
+                        <h3 class="font-heading text-2xl uppercase mb-2">Horario</h3>
+                        <p>Organiza tus clases y materias. ¡Lleva un registro de tus calificaciones!</p>
+                    </div>
+                    <div class="tutorial-card" id="tutorial-card-1">
+                        <h3 class="font-heading text-2xl uppercase mb-2">Inicio</h3>
+                        <p>Tu centro de mando. Visualiza tus tareas, rachas y entra en modo Zen.</p>
+                    </div>
+                </div>
+                <button id="start-app-btn" class="btn btn-primary text-xl mt-8">¡Entendido!</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Interfaz Principal de la App -->
+    <div id="main-app-ui" class="w-full h-full" style="display: none;">
+        <!-- Contenedor Principal de Vistas con Scroll Snap -->
+        <main id="app-container" class="w-full h-full">
+            <!-- Vista: Dashboard -->
+            <section id="dashboard-view" data-nav-name="Inicio" class="view">
+                <div class="view-content">
+                    <div class="flat-pane p-4 md:p-6">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h1 id="greeting-text" class="font-heading text-2xl md:text-4xl uppercase"></h1>
+                                <p id="dashboard-summary" class="text-secondary text-base md:text-lg mt-1"></p>
+                            </div>
+                            <div id="streak-container" class="text-center flex-shrink-0 ml-4">
+                                <span class="text-3xl md:text-4xl">🔥</span>
+                                <p id="streak-text" class="font-bold text-base md:text-lg">0 días</p>
+                            </div>
+                        </div>
+                        <p id="motivational-quote" class="mt-4 italic text-secondary text-sm md:text-base"></p>
+                        <div class="mt-6">
+                            <button id="dashboard-zen-btn" class="btn btn-primary w-full md:w-auto flex items-center justify-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3.87v16.26M16 3.87v16.26M3.87 8h16.26M3.87 16h16.26M12 2v20"></path></svg>
+                                Iniciar Sesión Zen
+                            </button>
+                        </div>
+                    </div>
+                    <div id="todays-schedule-section" class="w-full"><h2 class="font-heading text-xl md:text-2xl uppercase mb-4 ml-2 text-on-bg">Clases de Hoy</h2><div id="todays-schedule-container" class="space-y-4"></div></div>
+                    <div id="focus-card-section" class="w-full"><h2 class="font-heading text-xl md:text-2xl uppercase mb-4 ml-2 text-on-bg">Enfoque Principal</h2><div id="focus-card-container"></div></div>
+                    <div id="pending-tasks-section" class="w-full"><div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 ml-2 gap-4"><h2 class="font-heading text-xl md:text-2xl uppercase text-on-bg">Próximas Tareas</h2><div id="task-filters" class="flex items-center gap-2 flex-wrap"></div></div><div id="pending-tasks-container" class="space-y-4"></div></div>
+                    <div id="completed-tasks-section" class="w-full mt-6"><h2 class="font-heading text-xl md:text-2xl uppercase mb-4 ml-2 text-on-bg">Tareas Completadas</h2><div id="completed-tasks-container" class="space-y-4"></div></div>
+                </div>
+                 <a href="#schedule-view" class="scroll-arrow"><span>Horario</span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m7 10 5 5 5-5"/></svg></a>
+            </section>
+
+            <!-- Vista: Horario -->
+            <section id="schedule-view" data-nav-name="Horario" class="view">
+                <div class="view-content">
+                    <div class="flat-pane p-4 md:p-6 w-full">
+                        <div id="schedule-display">
+                            <header class="flex justify-between items-center mb-8"><h1 class="font-heading text-2xl md:text-4xl uppercase">Horario</h1><button id="add-subject-btn" class="btn btn-primary flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>Añadir</button></header>
+                            <div id="schedule-list-container" class="space-y-8"></div>
+                        </div>
+                        <div id="subject-form-container" style="display: none;">
+                            <header class="flex justify-between items-center mb-6"><h1 id="subject-form-title" class="font-heading text-2xl md:text-4xl uppercase"></h1><button id="cancel-subject-form-btn" class="btn">Cancelar</button></header>
+                            <form id="subject-form" class="space-y-6"><input type="hidden" id="subject-id-input"><div><label for="subject-name" class="font-bold block mb-2">Nombre Materia *</label><input type="text" id="subject-name" class="input-field" required></div><div><label for="subject-day" class="font-bold block mb-2">Día *</label><select id="subject-day" class="input-field" required><option value="1">Lunes</option><option value="2">Martes</option><option value="3">Miércoles</option><option value="4">Jueves</option><option value="5">Viernes</option><option value="6">Sábado</option><option value="0">Domingo</option></select></div><div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div><label for="subject-start-time" class="font-bold block mb-2">Hora Inicio *</label><input type="time" id="subject-start-time" class="input-field" required></div><div><label for="subject-end-time" class="font-bold block mb-2">Hora Fin *</label><input type="time" id="subject-end-time" class="input-field" required></div></div><button type="submit" id="save-subject-btn" class="w-full btn btn-primary text-xl"></button></form>
+                        </div>
+                    </div>
+                </div>
+                <a href="#calendar-view" class="scroll-arrow"><span>Calendario</span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m7 10 5 5 5-5"/></svg></a>
+            </section>
+
+            <!-- Vista: Calendario -->
+            <section id="calendar-view" data-nav-name="Calendario" class="view">
+                <div class="view-content">
+                    <div class="flat-pane p-4 md:p-6 w-full">
+                        <header class="flex justify-between items-center mb-6"><h1 id="calendar-title" class="font-heading text-2xl md:text-3xl uppercase"></h1><div class="flex items-center gap-2"><button id="calendar-prev-month-btn" class="btn btn-icon"><</button><button id="calendar-next-month-btn" class="btn btn-icon">></button></div></header>
+                        <div id="calendar-grid" class="mb-4"></div>
+                        <div id="calendar-tasks-list"><h3 class="font-heading text-xl uppercase mb-2">Tareas del día:</h3><div id="calendar-tasks-container" class="space-y-2"><p class="text-secondary">Selecciona un día para ver las tareas.</p></div></div>
+                    </div>
+                </div>
+                <a href="#settings-view" class="scroll-arrow"><span>Ajustes</span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m7 10 5 5 5-5"/></svg></a>
+            </section>
+            
+            <!-- Vista: Ajustes -->
+            <section id="settings-view" data-nav-name="Ajustes" class="view">
+                <div class="view-content">
+                    <h1 class="font-heading text-4xl md:text-5xl uppercase mb-8 text-on-bg">Configuración</h1>
+                    
+                    <div class="settings-card">
+                        <div class="settings-card-header">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"></path><path d="M12 6v6l4 2"></path></svg>
+                            <h2 class="font-heading text-2xl uppercase">Modo Zen</h2>
+                        </div>
+                        <div class="settings-card-content">
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div><label for="zen-pomodoro-duration" class="font-bold block mb-2 text-sm">Enfoque (min)</label><input type="number" id="zen-pomodoro-duration" class="input-field" min="1"></div>
+                                <div><label for="zen-short-break-duration" class="font-bold block mb-2 text-sm">Descanso Corto (min)</label><input type="number" id="zen-short-break-duration" class="input-field" min="1"></div>
+                                <div><label for="zen-long-break-duration" class="font-bold block mb-2 text-sm">Descanso Largo (min)</label><input type="number" id="zen-long-break-duration" class="input-field" min="1"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-card">
+                        <div class="settings-card-header">
+                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0L12 2.69z"></path></svg>
+                            <h2 class="font-heading text-2xl uppercase">Apariencia</h2>
+                        </div>
+                        <div class="settings-card-content space-y-6">
+                            <div><label for="color-picker" class="font-bold block mb-2">Color de Acento</label><input type="color" id="color-picker" class="input-field h-12 p-1"></div>
+                            <div><label for="wallpaper-url-input" class="font-bold block mb-2">Fondo desde URL</label><div class="flex gap-2"><input type="text" id="wallpaper-url-input" class="input-field flex-1" placeholder="https://..."><button id="save-wallpaper-url-btn" class="btn">Guardar</button></div></div>
+                            <div><label for="wallpaper-file-input" class="font-bold block mb-2">Fondo desde archivo</label><input type="file" id="wallpaper-file-input" accept="image/*" class="input-field"></div>
+                            <button id="reset-wallpaper-btn" class="w-full md:w-auto btn">Restaurar fondo</button>
+                        </div>
+                    </div>
+
+                    <div class="settings-card">
+                        <div class="settings-card-header">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                            <h2 class="font-heading text-2xl uppercase">Datos</h2>
+                        </div>
+                        <div class="settings-card-content">
+                            <div class="flex flex-col md:flex-row gap-4"><button id="export-btn" class="flex-1 btn">Exportar</button><button id="import-btn" class="flex-1 btn">Importar</button></div>
+                            <input type="file" id="import-file-input" accept=".foco,.json" class="hidden">
+                        </div>
+                    </div>
+
+                    <div class="settings-card border-danger-color">
+                        <div class="settings-card-header text-danger-color">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                            <h2 class="font-heading text-2xl uppercase">Zona de Peligro</h2>
+                        </div>
+                        <div class="settings-card-content">
+                             <p class="text-secondary mb-4 text-sm">Esta acción no se puede deshacer. Se borrarán todas tus tareas, horarios y configuraciones permanentemente.</p>
+                            <button id="reset-app-btn" class="w-full btn btn-danger font-bold text-lg">Reiniciar Aplicación</button>
+                        </div>
+                    </div>
+                </div>
+                <a href="#dashboard-view" class="scroll-arrow"><span>Inicio</span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transform: rotate(180deg);"><path d="m7 10 5 5 5-5"/></svg></a>
+            </section>
+        </main>
+        
+        <button id="fab-add-task" class="btn btn-primary">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        </button>
+        
+        <div id="hidden-views-container">
+            <section id="details-view" class="view hidden-view"><div class="flat-pane p-4 md:p-6 w-full max-w-4xl"><header class="flex justify-between items-center mb-6 pb-4 border-b-2 border-white/20 flex-wrap gap-2"><button id="back-to-dashboard-btn" class="btn flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>Volver</button><div class="flex gap-2"><button id="start-zen-session-btn" class="btn btn-primary flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/><path d="M12 6v6l4 2"/></svg>Sesión Zen</button><button id="edit-task-btn" class="btn flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>Editar</button></div></header><div id="task-details-content"></div></div></section>
+            <section id="form-view" class="view hidden-view"><div class="flat-pane p-4 md:p-6 max-w-3xl w-full"><header class="flex justify-between items-center mb-6"><h1 id="form-title" class="font-heading text-3xl md:text-4xl uppercase"></h1><button id="cancel-form-btn" class="btn">Cancelar</button></header><form id="task-form" class="space-y-6"><input type="hidden" id="task-id-input"><div><label for="task-title" class="font-bold block mb-2">Título *</label><input type="text" id="task-title" class="input-field" required></div><div><label for="task-description" class="font-bold block mb-2">Descripción</label><textarea id="task-description" rows="4" class="input-field"></textarea></div><div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div><label for="task-due-date" class="font-bold block mb-2">Fecha</label><input type="datetime-local" id="task-due-date" class="input-field"></div><div><label for="task-priority" class="font-bold block mb-2">Prioridad</label><select id="task-priority" class="input-field"><option value="low">Baja</option><option value="medium" selected>Media</option><option value="high">Alta</option></select></div></div><div><label for="task-tags" class="font-bold block mb-2">Etiquetas</label><input type="text" id="task-tags" class="input-field" placeholder="#universidad, #personal..."></div><div><h3 class="font-bold mb-2">Subtareas</h3><div id="subtasks-form-list" class="space-y-2 mb-3"></div><button type="button" id="add-subtask-form-btn" class="btn text-sm">+ Añadir subtarea</button></div><button type="submit" id="save-task-btn" class="w-full btn btn-primary text-xl"></button></form></div></section>
+            <section id="grades-view" class="view hidden-view"><div class="flat-pane p-4 md:p-6 w-full max-w-4xl"><header class="flex justify-between items-center mb-6 pb-4 border-b-2 border-white/20 flex-wrap gap-2"><button id="back-to-schedule-btn" class="btn flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>Volver</button><div class="flex gap-2"><button id="edit-subject-grades-btn" class="btn flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>Editar Materia</button></div></header><div id="grades-content" class="space-y-8"><div class="text-center"><h1 id="grades-subject-title" class="font-heading text-3xl md:text-5xl uppercase mb-2"></h1><p id="grades-average" class="text-2xl font-bold text-secondary"></p></div><div id="grades-list-container" class="space-y-4"></div><button id="add-grade-btn" class="btn btn-primary w-full text-xl"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" class="inline-block mr-2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>Añadir Calificación</button></div></div></section>
+        </div>
+    </div>
+
+    <!-- Vista: Modo Zen -->
+    <section id="zen-view" class="view">
+        <canvas id="zen-canvas"></canvas>
+        <div id="zen-border-clock">
+            <div id="border-top" class="border-segment"></div>
+            <div id="border-right" class="border-segment"></div>
+            <div id="border-bottom" class="border-segment"></div>
+            <div id="border-left" class="border-segment"></div>
+        </div>
+        <div id="zen-timer-container" class="relative flex flex-col items-center justify-center">
+            <svg id="zen-progress-svg" class="absolute inset-0 w-full h-full">
+                <circle id="zen-progress-bg" stroke="rgba(255,255,255,0.15)" stroke-width="12" fill="transparent" />
+                <circle id="zen-progress-ring" stroke="var(--accent-primary)" stroke-width="12" fill="transparent" stroke-linecap="round" />
+            </svg>
+            <div class="relative">
+                <h1 id="zen-timer-display" class="font-heading text-8xl md:text-9xl">25:00</h1>
+                <p id="zen-status-text" class="text-2xl text-secondary uppercase tracking-widest text-center">ENFOQUE</p>
+            </div>
+        </div>
+        <div id="zen-controls">
+            <div id="zen-sound-controls" class="relative">
+                <button class="btn btn-icon w-16 h-16"><svg id="zen-sound-icon" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg></button>
+                <div id="zen-sound-popup" class="flat-pane">
+                    <div id="zen-sound-selector" class="space-y-2 mb-4"></div>
+                    <input type="range" id="zen-volume-slider" min="0" max="1" step="0.05" value="0.5" class="w-full">
+                </div>
+            </div>
+            <button id="exit-zen-btn" class="btn btn-danger btn-icon w-16 h-16"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+        </div>
+        <audio id="audio-rain" src="https://www.soundjay.com/nature/rain-light-2.mp3" loop></audio>
+        <audio id="audio-forest" src="https://www.soundjay.com/nature/forest-reverb-1.mp3" loop></audio>
+        <audio id="audio-whitenoise" src="https://www.soundjay.com/nature/white-noise-1.mp3" loop></audio>
+    </section>
+    
+    <!-- Modales y Notificaciones -->
+    <div id="subtask-modal" class="modal-overlay"><div class="modal-content flat-pane w-11/12 max-w-md p-6"><h2 class="font-heading text-2xl uppercase mb-4">Añadir Subtarea</h2><input type="text" id="subtask-input" class="input-field mb-4" placeholder="Descripción..."><div class="flex gap-4"><button id="confirm-add-subtask-btn" class="flex-1 btn btn-primary">Añadir</button><button id="cancel-add-subtask-btn" class="flex-1 btn">Cancelar</button></div></div></div>
+    <div id="confirm-zen-log-modal" class="modal-overlay"><div id="confirm-zen-log-content" class="modal-content flat-pane w-11/12 max-w-md p-6 text-center"></div></div>
+    <div id="achievement-toast" class="flat-pane"><div id="achievement-toast-content" class="flex items-center gap-4 text-primary"></div></div>
+    <div id="add-grade-modal" class="modal-overlay">
+        <div class="modal-content flat-pane w-11/12 max-w-md p-6">
+            <h2 class="font-heading text-2xl uppercase mb-4">Añadir Calificación</h2>
+            <form id="add-grade-form" class="space-y-4">
+                <div>
+                    <label for="grade-name-input" class="font-bold block mb-2">Descripción</label>
+                    <input type="text" id="grade-name-input" class="input-field" placeholder="Ej: Examen Parcial 1" required>
+                </div>
+                <div>
+                    <label for="grade-value-input" class="font-bold block mb-2">Calificación</label>
+                    <input type="number" id="grade-value-input" class="input-field" placeholder="Ej: 8.5" step="0.1" required>
+                </div>
+                <div class="flex gap-4 mt-6">
+                    <button type="submit" class="flex-1 btn btn-primary">Añadir</button>
+                    <button type="button" id="cancel-add-grade-btn" class="flex-1 btn">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Script Principal de la App (sin cambios) -->
+     <script src="data-manager.js"></script>
+    <script src="script.js" defer></script>
+</body>
+</html>
