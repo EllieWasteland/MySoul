@@ -133,6 +133,9 @@
             background: transparent;
             cursor: pointer;
             transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+            display: block;
+            text-decoration: none;
+            text-align: center;
         }
         .hud-item:hover {
             background-color: var(--highlight-color);
@@ -301,6 +304,11 @@
                  <div class="hud-item">
                     <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
                     <button id="add-memory-btn" class="hud-button">Nueva Memoria</button>
+                </div>
+                <!-- BOTÓN AÑADIDO -->
+                <div class="hud-item">
+                    <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
+                    <a href="index.html" class="hud-button">Volver al Hub</a>
                 </div>
             </div>
             <div id="details-nav-buttons" class="hidden">
