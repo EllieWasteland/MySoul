@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MyTime</title>
-
+    
     
     <!-- Scripts y Fuentes Externas -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -41,11 +41,15 @@
                             </div>
                         </div>
                         <p id="motivational-quote" class="mt-4 italic text-secondary text-sm md:text-base"></p>
-                        <div class="mt-6">
-                            <button id="dashboard-zen-btn" class="btn btn-primary w-full md:w-auto flex items-center justify-center gap-2">
+                        <div class="mt-6 flex flex-wrap gap-4">
+                            <button id="dashboard-zen-btn" class="btn btn-primary flex items-center justify-center gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3.87v16.26M16 3.87v16.26M3.87 8h16.26M3.87 16h16.26M12 2v20"></path></svg>
                                 Iniciar Sesión Zen
                             </button>
+                             <a href="index.html" class="btn flex items-center justify-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H6M12 5l-7 7 7 7"/></svg>
+                                Volver a MySoul
+                            </a>
                         </div>
                     </div>
                     <div id="focus-card-section" class="content-block"><h2 class="font-heading text-xl md:text-2xl title-line">Enfoque Principal</h2><div id="focus-card-container" class="mt-4"></div></div>
@@ -56,9 +60,9 @@
 
             <!-- Vista: Tareas -->
             <section id="tasks-view" data-nav-name="Tareas" class="view">
-                <div class="view-content">
-                    <div id="pending-tasks-section" class="content-block h-1/2 flex flex-col"><div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4 flex-shrink-0"><h2 class="font-heading text-xl md:text-2xl title-line">Próximas Tareas</h2><div id="task-filters" class="flex items-center gap-2 flex-wrap"></div></div><div id="pending-tasks-container" class="space-y-3 flex-grow overflow-y-auto custom-scrollbar"></div></div>
-                    <div id="completed-tasks-section" class="content-block h-1/2 flex flex-col"><div class="flex justify-between items-center mb-4 flex-shrink-0"><h2 class="font-heading text-xl md:text-2xl title-line">Tareas Completadas</h2><button id="delete-completed-btn" class="btn btn-danger text-xs">Limpiar</button></div><div id="completed-tasks-container" class="space-y-3 mt-4 flex-grow overflow-y-auto custom-scrollbar"></div></div>
+                <div class="view-content h-full flex flex-col gap-4">
+                    <div id="pending-tasks-section" class="content-block flex flex-col flex-1 min-h-0"><div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4 flex-shrink-0"><h2 class="font-heading text-xl md:text-2xl title-line">Próximas Tareas</h2><div id="task-filters" class="flex items-center gap-2 flex-wrap"></div></div><div id="pending-tasks-container" class="space-y-3 flex-grow overflow-y-auto custom-scrollbar"></div></div>
+                    <div id="completed-tasks-section" class="content-block flex flex-col flex-1 min-h-0"><div class="flex justify-between items-center mb-4 flex-shrink-0"><h2 class="font-heading text-xl md:text-2xl title-line">Tareas Completadas</h2><button id="delete-completed-btn" class="btn btn-danger text-xs">Limpiar</button></div><div id="completed-tasks-container" class="space-y-3 mt-4 flex-grow overflow-y-auto custom-scrollbar"></div></div>
                 </div>
                 <a href="#schedule-view" class="scroll-arrow"><span>Horario</span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m7 10 5 5 5-5"/></svg></a>
             </section>
@@ -96,8 +100,38 @@
             <section id="settings-view" data-nav-name="Ajustes" class="view">
                 <div class="view-content">
                     <h1 class="font-heading text-4xl md:text-5xl mb-8 title-line">Configuración</h1>
-                    <div class="content-block"><div class="flex items-center gap-3 mb-4"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0L12 2.69z"></path></svg><h2 class="font-heading text-2xl">Apariencia</h2></div><div class="space-y-6"><div><label for="color-picker" class="font-bold block mb-2">Color de Acento</label><input type="color" id="color-picker" class="input-field h-12 p-1"></div><div><label for="wallpaper-url-input" class="font-bold block mb-2">Fondo desde URL</label><div class="flex gap-2"><input type="text" id="wallpaper-url-input" class="input-field flex-1" placeholder="https://..."><button id="save-wallpaper-url-btn" class="btn">Guardar</button></div></div><div><label for="wallpaper-file-input" class="font-bold block mb-2">Fondo desde archivo</label><input type="file" id="wallpaper-file-input" accept="image/*" class="input-field"></div><button id="reset-wallpaper-btn" class="w-full md:w-auto btn">Restaurar fondo</button></div></div>
-                    <div class="content-block border-danger-color"><div class="flex items-center gap-3 mb-4 text-danger-color"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg><h2 class="font-heading text-2xl">Zona de Peligro</h2></div><p class="text-secondary mb-4 text-sm">Esta acción no se puede deshacer. Se borrarán todas tus tareas, horarios y configuraciones permanentemente.</p><button id="reset-app-btn" class="w-full btn btn-danger font-bold text-lg">Reiniciar Aplicación</button></div>
+                    <div class="content-block">
+                        <div class="flex items-center gap-3 mb-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0L12 2.69z"></path></svg>
+                            <h2 class="font-heading text-2xl">Apariencia</h2>
+                        </div>
+                        <div class="space-y-6">
+                            <div>
+                                <label for="color-picker" class="font-bold block mb-2">Color de Acento</label>
+                                <input type="color" id="color-picker" class="input-field h-12 p-1">
+                            </div>
+                            <div>
+                                <label for="wallpaper-url-input" class="font-bold block mb-2">Fondo desde URL</label>
+                                <div class="flex gap-2">
+                                    <input type="text" id="wallpaper-url-input" class="input-field flex-1" placeholder="https://...">
+                                    <button id="save-wallpaper-url-btn" class="btn">Guardar</button>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="wallpaper-file-input" class="font-bold block mb-2">Fondo desde archivo</label>
+                                <input type="file" id="wallpaper-file-input" accept="image/*" class="input-field">
+                            </div>
+                            <button id="reset-wallpaper-btn" class="w-full md:w-auto btn">Restaurar fondo</button>
+                        </div>
+                    </div>
+                    <div class="content-block border-danger-color">
+                        <div class="flex items-center gap-3 mb-4 text-danger-color">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                            <h2 class="font-heading text-2xl">Zona de Peligro</h2>
+                        </div>
+                        <p class="text-secondary mb-4 text-sm">Esta acción no se puede deshacer. Se borrarán todas tus tareas, horarios y configuraciones permanentemente.</p>
+                        <button id="reset-app-btn" class="w-full btn btn-danger font-bold text-lg">Reiniciar Aplicación</button>
+                    </div>
                 </div>
                 <a href="#dashboard-view" class="scroll-arrow"><span>Inicio</span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transform: rotate(180deg);"><path d="m7 10 5 5 5-5"/></svg></a>
             </section>
@@ -106,8 +140,58 @@
         <button id="fab-add-task" class="btn btn-primary"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
         
         <div id="hidden-views-container">
-            <section id="details-view" class="view hidden-view"><div class="modal-panel w-full max-w-4xl"><header class="flex justify-between items-center mb-6 pb-4 border-b border-border-color flex-wrap gap-2"><button id="back-to-dashboard-btn" class="btn flex items-center gap-2 flex-shrink-0 whitespace-nowrap"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>Volver</button><div class="flex gap-2 flex-nowrap"><button id="start-zen-session-btn" class="btn btn-primary flex items-center gap-2 whitespace-nowrap"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/><path d="M12 6v6l4 2"/></svg>Sesión Zen</button><button id="edit-task-btn" class="btn flex items-center gap-2 whitespace-nowrap"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>Editar</button></div></header><div id="task-details-content"></div></div></section>
-            <section id="form-view" class="view hidden-view"><div class="modal-panel max-w-3xl w-full"><header class="flex justify-between items-center mb-6"><h1 id="form-title" class="font-heading text-3xl md:text-4xl title-line"></h1><button id="cancel-form-btn" class="btn">Cancelar</button></header><form id="task-form" class="space-y-6"><input type="hidden" id="task-id-input"><div><label for="task-title" class="font-bold block mb-2">Título *</label><input type="text" id="task-title" class="input-field" required></div><div><label for="task-description" class="font-bold block mb-2">Descripción</label><textarea id="task-description" rows="4" class="input-field"></textarea></div><div class="grid grid-cols-1 md:grid-cols-2 gap-6"><div><label for="task-due-date" class="font-bold block mb-2">Fecha</label><input type="datetime-local" id="task-due-date" class="input-field"></div><div><label for="task-priority" class="font-bold block mb-2">Prioridad</label><select id="task-priority" class="input-field"><option value="low">Baja</option><option value="medium" selected>Media</option><option value="high">Alta</option></select></div></div><div><label for="task-tags" class="font-bold block mb-2">Etiquetas</label><input type="text" id="task-tags" class="input-field" placeholder="#universidad, #personal..."></div><div><h3 class="font-bold mb-2">Subtareas</h3><div id="subtasks-form-list" class="space-y-2 mb-3"></div><button type="button" id="add-subtask-form-btn" class="btn text-sm">+ Añadir subtarea</button></div><button type="submit" id="save-task-btn" class="w-full btn btn-primary text-xl"></button></form></div></section>
+            <section id="details-view" class="view hidden-view"><div class="modal-panel w-full max-w-4xl"><header class="flex flex-col sm:flex-row justify-between items-center mb-6 pb-4 border-b border-border-color gap-4"><button id="back-to-dashboard-btn" class="btn w-full sm:w-auto flex items-center justify-center gap-2 flex-shrink-0 whitespace-nowrap"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>Volver</button><div class="flex w-full sm:w-auto gap-2 flex-nowrap"><button id="start-zen-session-btn" class="btn btn-primary flex-1 flex items-center justify-center gap-2 whitespace-nowrap"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/><path d="M12 6v6l4 2"/></svg>Sesión Zen</button><button id="edit-task-btn" class="btn flex-1 flex items-center justify-center gap-2 whitespace-nowrap"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>Editar</button></div></header><div id="task-details-content"></div></div></section>
+            
+            <!-- FORMULARIO MULTI-PASO -->
+            <section id="multi-step-form-view" class="view hidden-view">
+                <div class="modal-panel w-full max-w-2xl flex flex-col">
+                    <div id="form-progress-bar" class="flex w-full gap-2 mb-6">
+                        <div class="progress-step"></div>
+                        <div class="progress-step"></div>
+                        <div class="progress-step"></div>
+                        <div class="progress-step"></div>
+                    </div>
+                    <h1 id="form-title" class="font-heading text-3xl md:text-4xl title-line mb-8"></h1>
+                    
+                    <div class="flex-grow overflow-y-auto">
+                        <!-- Paso 1: Título -->
+                        <div id="form-step-1" class="form-step">
+                            <label for="task-title" class="font-bold block mb-4 text-xl">¿Cuál es el nombre de la tarea?</label>
+                            <input type="text" id="task-title" class="input-field text-lg" required>
+                        </div>
+                        <!-- Paso 2: Descripción -->
+                        <div id="form-step-2" class="form-step">
+                            <label for="task-description" class="font-bold block mb-4 text-xl">Añade una descripción</label>
+                            <textarea id="task-description" rows="5" class="input-field text-lg"></textarea>
+                        </div>
+                        <!-- Paso 3: Detalles -->
+                        <div id="form-step-3" class="form-step">
+                             <h2 class="font-bold block mb-4 text-xl">Detalles adicionales</h2>
+                             <div class="space-y-6">
+                                <div><label for="task-due-date" class="font-bold block mb-2">Fecha Límite</label><input type="datetime-local" id="task-due-date" class="input-field"></div>
+                                <div><label for="task-priority" class="font-bold block mb-2">Prioridad</label><select id="task-priority" class="input-field"><option value="low">Baja</option><option value="medium" selected>Media</option><option value="high">Alta</option></select></div>
+                                <div><label for="task-tags" class="font-bold block mb-2">Etiquetas (separadas por coma)</label><input type="text" id="task-tags" class="input-field" placeholder="#universidad, #personal..."></div>
+                            </div>
+                        </div>
+                        <!-- Paso 4: Subtareas -->
+                        <div id="form-step-4" class="form-step">
+                             <h2 class="font-bold block mb-4 text-xl">Divide y vencerás</h2>
+                             <div id="subtasks-form-list" class="space-y-2 mb-3"></div>
+                             <button type="button" id="add-subtask-form-btn" class="btn text-sm w-full">+ Añadir subtarea</button>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-center mt-8 pt-4 border-t border-border-color">
+                        <button id="form-cancel-btn" class="btn">Cancelar</button>
+                        <div class="flex items-center gap-2">
+                            <button id="form-back-btn" class="btn">Atrás</button>
+                            <button id="form-skip-btn" class="btn">Omitir</button>
+                            <button id="form-next-btn" class="btn btn-primary">Siguiente</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <section id="grades-view" class="view hidden-view"><div class="modal-panel w-full max-w-4xl"><header class="flex justify-between items-center mb-6 pb-4 border-b border-border-color flex-wrap gap-2"><button id="back-to-schedule-btn" class="btn flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>Volver</button><div class="flex gap-2"><button id="edit-subject-grades-btn" class="btn flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>Editar Materia</button></div></header><div id="grades-content" class="space-y-8"><div class="text-center"><h1 id="grades-subject-title" class="font-heading text-3xl md:text-5xl mb-2"></h1><p id="grades-average" class="text-2xl font-bold text-secondary"></p></div><div id="grades-list-container" class="space-y-4"></div><button id="add-grade-btn" class="btn btn-primary w-full text-xl"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" class="inline-block mr-2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>Añadir Calificación</button></div></div></section>
             
             <!-- Vista de Configuración del Modo Zen -->

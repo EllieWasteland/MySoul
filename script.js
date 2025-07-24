@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
         calendar: document.getElementById('calendar-view'), 
         settings: document.getElementById('settings-view'),
         details: document.getElementById('details-view'),
-        form: document.getElementById('form-view'),
+        multiStepForm: document.getElementById('multi-step-form-view'),
         grades: document.getElementById('grades-view'),
         zen: document.getElementById('zen-view'),
         zenSetup: document.getElementById('zen-setup-view'),
@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
         container: document.getElementById('onboarding-container'),
     };
     const buttons = {
-        backToDashboard: document.getElementById('back-to-dashboard-btn'), editTask: document.getElementById('edit-task-btn'), cancelForm: document.getElementById('cancel-form-btn'), saveTask: document.getElementById('save-task-btn'),
+        backToDashboard: document.getElementById('back-to-dashboard-btn'), editTask: document.getElementById('edit-task-btn'),
         resetApp: document.getElementById('reset-app-btn'),
         saveWallpaperUrl: document.getElementById('save-wallpaper-url-btn'), resetWallpaper: document.getElementById('reset-wallpaper-btn'),
         startZenSession: document.getElementById('start-zen-session-btn'), exitZen: document.getElementById('exit-zen-btn'),
@@ -30,6 +30,11 @@ document.addEventListener('DOMContentLoaded', () => {
         backToSchedule: document.getElementById('back-to-schedule-btn'), editSubjectGrades: document.getElementById('edit-subject-grades-btn'), addGrade: document.getElementById('add-grade-btn'),
         cancelAddGrade: document.getElementById('cancel-add-grade-btn'),
         fabAddTask: document.getElementById('fab-add-task'),
+        // Multi-Step Form
+        formBack: document.getElementById('form-back-btn'),
+        formNext: document.getElementById('form-next-btn'),
+        formSkip: document.getElementById('form-skip-btn'),
+        formCancel: document.getElementById('form-cancel-btn'), // Botón de cancelar añadido
         // Zen Setup
         zenModeTimer: document.getElementById('zen-mode-timer-btn'),
         zenModeStopwatch: document.getElementById('zen-mode-stopwatch-btn'),
@@ -39,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     const inputs = { importFile: document.getElementById('import-file-input'), wallpaperUrl: document.getElementById('wallpaper-url-input'), wallpaperFile: document.getElementById('wallpaper-file-input'), colorPicker: document.getElementById('color-picker') };
     const containers = {
-        pendingTasks: document.getElementById('pending-tasks-container'), completedTasks: document.getElementById('completed-tasks-container'), taskDetails: document.getElementById('task-details-content'), subtasksFormList: document.getElementById('subtasks-form-list'),
+        pendingTasks: document.getElementById('pending-tasks-container'), completedTasks: document.getElementById('completed-tasks-container'), taskDetails: document.getElementById('task-details-content'),
         greetingText: document.getElementById('greeting-text'), dashboardSummary: document.getElementById('dashboard-summary'), motivationalQuote: document.getElementById('motivational-quote'),
         focusCard: document.getElementById('focus-card-container'), taskFilters: document.getElementById('task-filters'), streak: document.getElementById('streak-text'),
         scheduleList: document.getElementById('schedule-list-container'), calendarGrid: document.getElementById('calendar-grid'), calendarTitle: document.getElementById('calendar-title'), calendarTasks: document.getElementById('calendar-tasks-container'),
@@ -48,8 +53,21 @@ document.addEventListener('DOMContentLoaded', () => {
         todaysSchedule: document.getElementById('todays-schedule-container'),
     };
     const formElements = {
-        form: document.getElementById('task-form'), formTitle: document.getElementById('form-title'), taskIdInput: document.getElementById('task-id-input'), title: document.getElementById('task-title'),
-        description: document.getElementById('task-description'), dueDate: document.getElementById('task-due-date'), priority: document.getElementById('task-priority'), tags: document.getElementById('task-tags'),
+        title: document.getElementById('form-title'),
+        progressBar: document.getElementById('form-progress-bar'),
+        steps: [
+            document.getElementById('form-step-1'),
+            document.getElementById('form-step-2'),
+            document.getElementById('form-step-3'),
+            document.getElementById('form-step-4'),
+        ],
+        taskTitle: document.getElementById('task-title'),
+        taskDescription: document.getElementById('task-description'),
+        taskDueDate: document.getElementById('task-due-date'),
+        taskPriority: document.getElementById('task-priority'),
+        taskTags: document.getElementById('task-tags'),
+        subtasksFormList: document.getElementById('subtasks-form-list'),
+        // Subject Form
         subjectForm: document.getElementById('subject-form'), subjectFormTitle: document.getElementById('subject-form-title'), subjectIdInput: document.getElementById('subject-id-input'),
         subjectName: document.getElementById('subject-name'), subjectDay: document.getElementById('subject-day'), subjectStartTime: document.getElementById('subject-start-time'), subjectEndTime: document.getElementById('subject-end-time'),
         addGradeForm: document.getElementById('add-grade-form'), gradeNameInput: document.getElementById('grade-name-input'), gradeValueInput: document.getElementById('grade-value-input'),
@@ -76,7 +94,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let unifiedData = getUnifiedData();
     let state = unifiedData.myTime;
 
-    // Defensive initialization for settings objects
     if (!state.settings) {
         state.settings = { color: '#FF4500' };
     }
@@ -84,6 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.zenSettings = { pomodoro: 25, shortBreak: 5, longBreak: 15 };
     }
 
+    let formState = {};
 
     const dataService = {
         async saveData(appState) {
@@ -95,8 +113,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- LÓGICA DEL SCRIPT ---
     const motivationalQuotes = [ "El secreto para salir adelante es empezar.", "La disciplina es el puente entre las metas y los logros.", "No mires el reloj; haz lo que él hace. Sigue moviéndote." ];
     let countdownInterval = null;
-    
-    // Zen State se reinicia en stopZenMode para asegurar una sesión limpia cada vez
     let zenState = {};
     
     // --- FUNCIONES PRINCIPALES ---
@@ -189,19 +205,118 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderTodaysSchedule() { if(!containers.todaysSchedule) return; const today = new Date().getDay(); const todaysClasses = state.schedule.filter(s => s.day == today).sort((a, b) => a.startTime.localeCompare(b.startTime)); if (todaysClasses.length === 0) { containers.todaysSchedule.innerHTML = `<div class="text-center p-6"><h3 class="font-heading text-xl">Día Libre</h3><p class="mt-1 text-sm text-secondary">No tienes clases programadas para hoy. ¡Disfruta!</p></div>`; } else { containers.todaysSchedule.innerHTML = todaysClasses.map(subject => `<div class="task-card"><h3 class="font-bold text-lg">${subject.name}</h3><p class="text-sm text-secondary">${subject.startTime} - ${subject.endTime}</p><p class="text-sm font-semibold schedule-countdown mt-2 font-mono" data-start-time="${subject.startTime}" data-end-time="${subject.endTime}"></p></div>`).join(''); } }
     function renderFocusCard() { if(!containers.focusCard) return; containers.focusCard.innerHTML = ''; const focusTask = state.tasks.filter(t => !t.completed && t.dueDate).sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))[0]; if (focusTask) { const card = createTaskCard(focusTask); card.classList.add('focus-card'); containers.focusCard.appendChild(card); } else { containers.focusCard.innerHTML = `<div class="text-center p-6"><h3 class="font-heading text-xl">Todo tranquilo</h3><p class="mt-1 text-sm text-secondary">No hay tareas urgentes. ¡Disfruta o añade un proyecto!</p></div>`; } }
     function renderTaskFilters() { if(!containers.taskFilters) return; const allTags = [...new Set(state.tasks.flatMap(t => t.tags))]; containers.taskFilters.innerHTML = `<select id="priority-filter" class="input-field !py-1 !w-auto"><option value="all">Prioridad</option><option value="high">Alta</option><option value="medium">Media</option><option value="low">Baja</option></select><select id="tag-filter" class="input-field !py-1 !w-auto"><option value="all">Etiqueta</option>${allTags.map(tag => `<option value="${tag}">${tag}</option>`).join('')}</select>`; const priorityFilter = document.getElementById('priority-filter'), tagFilter = document.getElementById('tag-filter'); priorityFilter.value = state.filters.priority; tagFilter.value = state.filters.tag; priorityFilter.addEventListener('change', (e) => { state.filters.priority = e.target.value; renderTasksView(); }); tagFilter.addEventListener('change', (e) => { state.filters.tag = e.target.value; renderTasksView(); }); }
-    async function renderTaskDetails() { if(!containers.taskDetails) return; const task = state.tasks.find(t => t.id === state.selectedTaskId); if (!task) return; let progress = 0; if (task.subtasks.length > 0) { const completed = task.subtasks.filter(st => st.completed).length; progress = (completed / task.subtasks.length) * 100; } else { progress = task.completed ? 100 : 0; } let detailsHTML = `<div class="flex flex-col items-center w-full"><div class="mb-6">${createProgressCircle(progress, 120)}</div><h2 class="font-heading text-3xl md:text-5xl mb-2 text-center break-words ${task.completed ? 'line-through text-secondary' : ''}">${task.title}</h2><div class="text-sm text-secondary mb-2 text-center">Prioridad: <span class="font-bold">${task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}</span></div>${task.tags.length > 0 && !task.completed ? `<div class="flex gap-2 justify-center flex-wrap mb-6">${task.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}</div>` : ''}<p class="mb-8 text-center w-full max-w-2xl">${task.description || '<em>Sin descripción.</em>'}</p><div class="w-full border-t border-border-color pt-6">`; if (task.subtasks.length > 0) { const comp = task.subtasks.filter(st => st.completed).length; const total = task.subtasks.length; const subsHTML = task.subtasks.map(st => `<div class="subtask-item flex items-center gap-4 p-3 border-b border-border-color" draggable="true" data-subtask-id="${st.id}"><span class="drag-handle text-secondary cursor-move">⠿</span><input type="checkbox" id="subtask-${st.id}" data-subtask-id="${st.id}" class="custom-checkbox" ${st.completed ? 'checked' : ''}><label for="subtask-${st.id}" class="flex-1 ${st.completed ? 'line-through text-secondary' : ''}">${st.text}</label></div>`).join(''); detailsHTML += `<h3 class="font-heading text-xl mb-4 title-line">Progreso (${comp}/${total})</h3><div id="subtasks-details-list">${subsHTML}</div><div class="flex justify-center mt-4"><button id="add-subtask-details-btn" class="btn text-sm">+ Añadir subtarea</button></div>`; } else { detailsHTML += `<div class="flex justify-center"><label for="complete-task-checkbox" class="flex items-center gap-4 cursor-pointer"><input type="checkbox" id="complete-task-checkbox" class="custom-checkbox w-8 h-8" ${task.completed ? 'checked' : ''}><span class="text-xl font-bold">Marcar como completada</span></label></div>`; } detailsHTML += `</div></div>`; containers.taskDetails.innerHTML = detailsHTML; setupSubtaskDragAndDrop('subtasks-details-list', task.id); if (task.subtasks.length > 0) { document.querySelectorAll('#subtasks-details-list input[type="checkbox"]').forEach(cb => { cb.addEventListener('change', async e => { const subtask = task.subtasks.find(st => st.id === e.target.dataset.subtaskId); if(subtask) { subtask.completed = e.target.checked; task.completed = task.subtasks.every(st => st.completed); if (task.completed) { task.completedAt = new Date().toISOString(); await updateStreak(); } await dataService.saveData(state); await renderTaskDetails(); } }); }); document.getElementById('add-subtask-details-btn').addEventListener('click', () => { openSubtaskModal(); }); } else { document.getElementById('complete-task-checkbox').addEventListener('change', async e => { task.completed = e.target.checked; if (task.completed) { task.completedAt = new Date().toISOString(); await updateStreak(); } await dataService.saveData(state); await renderTaskDetails(); }); } }
-    function renderFormSubtasks() { containers.subtasksFormList.innerHTML = state.tempSubtasks.map((st, i) => `<div class="subtask-item flex items-center justify-between p-2 rounded-lg bg-bg-primary" draggable="true" data-index="${i}"><span class="drag-handle text-secondary cursor-move">⠿</span><span class="flex-1 px-2 text-secondary">${st.text}</span><button type="button" class="font-bold text-red-500 px-2" data-index="${i}">×</button></div>`).join(''); containers.subtasksFormList.querySelectorAll('button').forEach(btn => btn.addEventListener('click', e => { state.tempSubtasks.splice(e.target.dataset.index, 1); renderFormSubtasks(); })); setupSubtaskDragAndDrop('subtasks-form-list'); }
+    async function renderTaskDetails() { if(!containers.taskDetails) return; const task = state.tasks.find(t => t.id === state.selectedTaskId); if (!task) return; let progress = 0; if (task.subtasks.length > 0) { const completed = task.subtasks.filter(st => st.completed).length; progress = (completed / task.subtasks.length) * 100; } else { progress = task.completed ? 100 : 0; } let detailsHTML = `<div class="flex flex-col items-center w-full"><div class="mb-6">${createProgressCircle(progress, 120)}</div><h2 class="font-heading text-3xl md:text-5xl mb-2 text-center break-words ${task.completed ? 'line-through text-secondary' : ''}">${task.title}</h2><div class="text-sm text-secondary mb-2 text-center">Prioridad: <span class="font-bold">${task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}</span></div>${task.tags.length > 0 && !task.completed ? `<div class="flex gap-2 justify-center flex-wrap mb-6">${task.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}</div>` : ''}<p class="mb-8 text-center w-full max-w-2xl">${task.description || '<em>Sin descripción.</em>'}</p><div class="w-full border-t border-border-color pt-6">`; if (task.subtasks.length > 0) { const comp = task.subtasks.filter(st => st.completed).length; const total = task.subtasks.length; const subsHTML = task.subtasks.map(st => `<div class="subtask-item flex items-center gap-4 p-3 border-b border-border-color" draggable="true" data-subtask-id="${st.id}"><span class="drag-handle text-secondary cursor-move">⠿</span><input type="checkbox" id="subtask-${st.id}" data-subtask-id="${st.id}" class="custom-checkbox" ${st.completed ? 'checked' : ''}><label for="subtask-${st.id}" class="flex-1 ${st.completed ? 'line-through text-secondary' : ''}">${st.text}</label></div>`).join(''); detailsHTML += `<h3 class="font-heading text-xl mb-4 title-line">Progreso (${comp}/${total})</h3><div id="subtasks-details-list">${subsHTML}</div><div class="flex justify-center mt-4"><button id="add-subtask-details-btn" class="btn text-sm">+ Añadir subtarea</button></div>`; } else { detailsHTML += `<div class="flex justify-center"><label for="complete-task-checkbox" class="flex items-center gap-4 cursor-pointer"><input type="checkbox" id="complete-task-checkbox" class="custom-checkbox w-8 h-8" ${task.completed ? 'checked' : ''}><span class="text-xl font-bold">Marcar como completada</span></label></div>`; } detailsHTML += `</div></div>`; containers.taskDetails.innerHTML = detailsHTML; if (task.subtasks.length > 0) { document.querySelectorAll('#subtasks-details-list input[type="checkbox"]').forEach(cb => { cb.addEventListener('change', async e => { const subtask = task.subtasks.find(st => st.id === e.target.dataset.subtaskId); if(subtask) { subtask.completed = e.target.checked; task.completed = task.subtasks.every(st => st.completed); if (task.completed) { task.completedAt = new Date().toISOString(); await updateStreak(); } await dataService.saveData(state); await renderTaskDetails(); } }); }); document.getElementById('add-subtask-details-btn').addEventListener('click', () => { openSubtaskModal(); }); } else { document.getElementById('complete-task-checkbox').addEventListener('change', async e => { task.completed = e.target.checked; if (task.completed) { task.completedAt = new Date().toISOString(); await updateStreak(); } await dataService.saveData(state); await renderTaskDetails(); }); } }
+    
+    // --- Multi-Step Form Logic ---
+    function resetFormState() {
+        formState = {
+            isEditing: false,
+            taskId: null,
+            currentStep: 1,
+            taskData: {
+                title: '',
+                description: '',
+                dueDate: '',
+                priority: 'medium',
+                tags: [],
+                subtasks: []
+            }
+        };
+    }
+
+    function showFormStep(step) {
+        formState.currentStep = step;
+        formElements.steps.forEach((el, index) => {
+            el.style.display = (index + 1 === step) ? 'flex' : 'none';
+        });
+        
+        const progressSteps = formElements.progressBar.children;
+        for (let i = 0; i < progressSteps.length; i++) {
+            progressSteps[i].classList.toggle('active', i < step);
+        }
+
+        buttons.formBack.style.visibility = step > 1 ? 'visible' : 'hidden';
+        buttons.formSkip.style.display = step > 1 && step < 4 ? 'inline-flex' : 'none';
+        buttons.formNext.textContent = step === 4 ? (formState.isEditing ? 'Guardar Cambios' : 'Crear Tarea') : 'Siguiente';
+    }
+
+    function openMultiStepForm(taskToEdit = null) {
+        resetFormState();
+        if (taskToEdit) {
+            formState.isEditing = true;
+            formState.taskId = taskToEdit.id;
+            formState.taskData = JSON.parse(JSON.stringify(taskToEdit)); // Deep copy
+            formElements.title.textContent = 'Editar Tarea';
+        } else {
+            formElements.title.textContent = 'Nueva Tarea';
+        }
+        
+        formElements.taskTitle.value = formState.taskData.title;
+        formElements.taskDescription.value = formState.taskData.description;
+        if (formState.taskData.dueDate) {
+            formElements.taskDueDate.value = new Date(new Date(formState.taskData.dueDate).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+        } else {
+            formElements.taskDueDate.value = '';
+        }
+        formElements.taskPriority.value = formState.taskData.priority;
+        formElements.taskTags.value = formState.taskData.tags.join(', ');
+        renderFormSubtasks();
+
+        showFormStep(1);
+        showHiddenView('multiStepForm');
+    }
+
+    function renderFormSubtasks() {
+        formElements.subtasksFormList.innerHTML = formState.taskData.subtasks.map((st, i) => `<div class="subtask-item flex items-center justify-between p-2 bg-bg-primary" data-index="${i}"><span class="flex-1 px-2 text-secondary">${st.text}</span><button type="button" class="font-bold text-red-500 px-2" data-index="${i}">×</button></div>`).join('');
+        formElements.subtasksFormList.querySelectorAll('button').forEach(btn => btn.addEventListener('click', e => {
+            formState.taskData.subtasks.splice(e.target.dataset.index, 1);
+            renderFormSubtasks();
+        }));
+    }
+
+    async function saveTask() {
+        const { title, description, dueDate, priority, tags, subtasks } = formState.taskData;
+        if (!title) {
+            alert('El título es obligatorio.');
+            return;
+        }
+
+        const taskData = {
+            title,
+            description,
+            dueDate: dueDate || null,
+            priority,
+            tags: typeof tags === 'string' ? tags.split(',').map(t => t.trim()).filter(t => t) : tags,
+            subtasks: subtasks.map((st, i) => ({ id: st.id || `sub-${Date.now()}-${i}`, text: st.text, completed: st.completed || false }))
+        };
+
+        if (formState.isEditing) {
+            const taskIndex = state.tasks.findIndex(t => t.id === formState.taskId);
+            if (taskIndex > -1) {
+                const originalTask = state.tasks[taskIndex];
+                state.tasks[taskIndex] = { ...originalTask, ...taskData, completed: taskData.subtasks.length > 0 ? taskData.subtasks.every(st => st.completed) : originalTask.completed };
+            }
+        } else {
+            state.tasks.push({ ...taskData, id: `task-${Date.now()}`, createdAt: new Date().toISOString(), completed: false, completedAt: null });
+        }
+
+        await dataService.saveData(state);
+        hideHiddenView('multiStepForm');
+        renderDashboard();
+        renderTasksView();
+    }
+
+
     function renderSettings() { 
         if(!inputs.colorPicker) return;
         inputs.colorPicker.value = state.settings.color; 
         inputs.wallpaperUrl.value = (state.wallpaper && !state.wallpaper.startsWith('data:')) ? state.wallpaper : ''; 
     }
-    function setupSubtaskDragAndDrop(containerId, taskId = null) { const list = document.getElementById(containerId); if(!list) return; let draggedItem = null; list.addEventListener('dragstart', e => { draggedItem = e.target.closest('.subtask-item'); setTimeout(() => draggedItem?.classList.add('dragging'), 0); }); list.addEventListener('dragend', () => { draggedItem?.classList.remove('dragging'); draggedItem = null; }); list.addEventListener('dragover', e => { e.preventDefault(); const afterElement = [...list.querySelectorAll('.subtask-item:not(.dragging)')].reduce((closest, child) => { const box = child.getBoundingClientRect(); const offset = e.clientY - box.top - box.height / 2; return (offset < 0 && offset > closest.offset) ? { offset: offset, element: child } : closest; }, { offset: Number.NEGATIVE_INFINITY }).element; const currentDragged = document.querySelector('.dragging'); if (afterElement == null) { list.appendChild(currentDragged); } else { list.insertBefore(currentDragged, afterElement); } }); list.addEventListener('drop', async e => { e.preventDefault(); const newOrder = Array.from(list.querySelectorAll('.subtask-item')).map(item => taskId ? item.dataset.subtaskId : parseInt(item.dataset.index)); if (taskId) { const task = state.tasks.find(t => t.id === taskId); if (task) { task.subtasks.sort((a, b) => newOrder.indexOf(a.id) - newOrder.indexOf(b.id)); await dataService.saveData(state); } } else { state.tempSubtasks.sort((a, b) => newOrder.indexOf(state.tempSubtasks.indexOf(a)) - newOrder.indexOf(state.tempSubtasks.indexOf(b))); } }); }
+    
     function openSubtaskModal() { modal.subtask.element.style.zIndex = '200'; modal.subtask.element.classList.add('active'); modal.subtask.input.value = ''; modal.subtask.input.focus(); }
     function closeSubtaskModal() { modal.subtask.element.classList.remove('active'); }
-    async function handleAddSubtask() { const text = modal.subtask.input.value.trim(); if (!text) return; if (views.form.classList.contains('active')) { state.tempSubtasks.push({ text, completed: false }); renderFormSubtasks(); } else { const task = state.tasks.find(t => t.id === state.selectedTaskId); if (task) { task.subtasks.push({ id: `sub-${Date.now()}`, text, completed: false }); await dataService.saveData(state); await renderTaskDetails(); } } closeSubtaskModal(); }
-    function openNewTaskForm() { state.selectedTaskId = null; formElements.form.reset(); formElements.form.querySelector('#save-task-btn').textContent = 'Crear Proyecto'; formElements.formTitle.textContent = 'Nuevo Proyecto'; state.tempSubtasks = []; renderFormSubtasks(); showHiddenView('form'); }
-    function openEditTaskForm(taskId) { const task = state.tasks.find(t => t.id === taskId); if (!task) return; state.selectedTaskId = taskId; formElements.form.reset(); formElements.form.querySelector('#save-task-btn').textContent = 'Guardar Cambios'; formElements.formTitle.textContent = 'Editar Proyecto'; formElements.title.value = task.title; formElements.description.value = task.description; if (task.dueDate) { formElements.dueDate.value = new Date(new Date(task.dueDate).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16); } formElements.priority.value = task.priority || 'medium'; formElements.tags.value = task.tags ? task.tags.join(', ') : ''; state.tempSubtasks = JSON.parse(JSON.stringify(task.subtasks)); renderFormSubtasks(); showHiddenView('form'); }
+    async function handleAddSubtask() { const text = modal.subtask.input.value.trim(); if (!text) return; if (views.multiStepForm.classList.contains('active')) { formState.taskData.subtasks.push({ text, completed: false }); renderFormSubtasks(); } else { const task = state.tasks.find(t => t.id === state.selectedTaskId); if (task) { task.subtasks.push({ id: `sub-${Date.now()}`, text, completed: false }); await dataService.saveData(state); await renderTaskDetails(); } } closeSubtaskModal(); }
+    
     function showSubjectForm(show) { if(!containers.subjectFormContainer) return; containers.subjectFormContainer.style.display = show ? 'block' : 'none'; containers.scheduleDisplay.style.display = show ? 'none' : 'block'; }
     function renderSchedule() { if(!containers.scheduleList) return; showSubjectForm(false); containers.scheduleList.innerHTML = ''; if (state.schedule.length === 0) { containers.scheduleList.innerHTML = `<div class="text-center p-4"><h3 class="font-heading text-xl">Horario Vacío</h3><p class="mt-1 text-sm text-secondary">Añade tu primera materia para empezar.</p></div>`; return; } const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']; const scheduleByDay = days.map((_, dayIndex) => state.schedule.filter(s => s.day == dayIndex).sort((a,b) => a.startTime.localeCompare(b.startTime))); days.forEach((dayName, dayIndex) => { if (scheduleByDay[dayIndex].length > 0) { const dayGroup = document.createElement('div'); dayGroup.className = 'schedule-day-group'; let dayHTML = `<h3 class="font-heading text-2xl pb-2 border-b border-border-color mb-4">${dayName}</h3><div class="space-y-3">`; scheduleByDay[dayIndex].forEach(s => { dayHTML += `<div class="task-card" data-subject-id="${s.id}"><span class="font-bold">${s.name}</span><span class="text-secondary font-semibold float-right">${s.startTime} - ${s.endTime}</span></div>`; }); dayHTML += `</div>`; dayGroup.innerHTML = dayHTML; containers.scheduleList.appendChild(dayGroup); } }); containers.scheduleList.querySelectorAll('[data-subject-id]').forEach(el => el.addEventListener('click', (e) => { state.selectedSubjectId = e.currentTarget.dataset.subjectId; renderGrades(); showHiddenView('grades'); })); }
     function openNewSubjectForm() { state.selectedSubjectId = null; formElements.subjectForm.reset(); formElements.subjectFormTitle.textContent = 'Nueva Materia'; buttons.saveSubject.textContent = 'Añadir Materia'; showSubjectForm(true); }
@@ -440,14 +555,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- EVENT HANDLERS ---
-    if(buttons.fabAddTask) buttons.fabAddTask.addEventListener('click', openNewTaskForm);
-    if(buttons.backToDashboard) buttons.backToDashboard.addEventListener('click', () => hideHiddenView('details'));
-    if(buttons.editTask) buttons.editTask.addEventListener('click', () => { if (state.selectedTaskId) openEditTaskForm(state.selectedTaskId); });
-    if(buttons.cancelForm) buttons.cancelForm.addEventListener('click', () => { hideHiddenView('form'); });
-    if(buttons.startZenSession) buttons.startZenSession.addEventListener('click', () => { state.currentZenTaskId = state.selectedTaskId; openZenSetup(); });
-    if(buttons.dashboardZen) buttons.dashboardZen.addEventListener('click', () => { state.currentZenTaskId = null; openZenSetup(); });
-    if(buttons.exitZen) buttons.exitZen.addEventListener('click', stopZenMode);
-    if(buttons.zenControlMain) buttons.zenControlMain.addEventListener('click', handleZenControlClick);
+    buttons.fabAddTask.addEventListener('click', () => openMultiStepForm());
+    buttons.backToDashboard.addEventListener('click', () => hideHiddenView('details'));
+    buttons.editTask.addEventListener('click', () => { 
+        if (state.selectedTaskId) {
+            const task = state.tasks.find(t => t.id === state.selectedTaskId);
+            hideHiddenView('details');
+            openMultiStepForm(task);
+        }
+    });
+
+    buttons.startZenSession.addEventListener('click', () => { state.currentZenTaskId = state.selectedTaskId; openZenSetup(); });
+    buttons.dashboardZen.addEventListener('click', () => { state.currentZenTaskId = null; openZenSetup(); });
+    buttons.exitZen.addEventListener('click', stopZenMode);
+    buttons.zenControlMain.addEventListener('click', handleZenControlClick);
     
     buttons.deleteCompleted.addEventListener('click', async () => {
         if (confirm('¿Estás seguro de que quieres eliminar todas las tareas completadas? Esta acción no se puede deshacer.')) {
@@ -456,6 +577,45 @@ document.addEventListener('DOMContentLoaded', () => {
             renderTasksView();
         }
     });
+
+    // Multi-Step Form Events
+    if(buttons.formCancel) buttons.formCancel.addEventListener('click', () => hideHiddenView('multiStepForm'));
+
+    buttons.formNext.addEventListener('click', () => {
+        const currentStep = formState.currentStep;
+        if (currentStep === 1 && !formElements.taskTitle.value.trim()) {
+            alert('El título es obligatorio.');
+            return;
+        }
+        
+        // Save current step data
+        if (currentStep === 1) formState.taskData.title = formElements.taskTitle.value.trim();
+        if (currentStep === 2) formState.taskData.description = formElements.taskDescription.value.trim();
+        if (currentStep === 3) {
+            formState.taskData.dueDate = formElements.taskDueDate.value;
+            formState.taskData.priority = formElements.taskPriority.value;
+            formState.taskData.tags = formElements.taskTags.value.split(',').map(t => t.trim()).filter(Boolean);
+        }
+
+        if (currentStep < 4) {
+            showFormStep(currentStep + 1);
+        } else {
+            saveTask();
+        }
+    });
+
+    buttons.formBack.addEventListener('click', () => {
+        if (formState.currentStep > 1) {
+            showFormStep(formState.currentStep - 1);
+        }
+    });
+
+    buttons.formSkip.addEventListener('click', () => {
+        if (formState.currentStep < 4) {
+            showFormStep(formState.currentStep + 1);
+        }
+    });
+
 
     // Zen Setup Events
     buttons.zenModeTimer.addEventListener('click', () => {
@@ -483,8 +643,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     buttons.cancelZenSetup.addEventListener('click', () => hideHiddenView('zenSetup'));
 
-
-    if(formElements.form) formElements.form.addEventListener('submit', async (e) => { e.preventDefault(); const title = formElements.title.value.trim(); if (!title) return; const tags = formElements.tags.value.split(',').map(t => t.trim()).filter(t => t); const commonData = { title, description: formElements.description.value.trim(), dueDate: formElements.dueDate.value, priority: formElements.priority.value, tags, subtasks: state.tempSubtasks.map((st, i) => ({ id: st.id || `sub-${Date.now()}-${i}`, text: st.text, completed: st.completed || false })) }; if (state.selectedTaskId) { const taskIndex = state.tasks.findIndex(t => t.id === state.selectedTaskId); if (taskIndex > -1) { const originalTask = state.tasks[taskIndex]; state.tasks[taskIndex] = { ...originalTask, ...commonData, completed: commonData.subtasks.length > 0 ? commonData.subtasks.every(st => st.completed) : originalTask.completed, completedAt: (commonData.subtasks.length > 0 && commonData.subtasks.every(st => st.completed)) ? new Date().toISOString() : null }; } } else { state.tasks.push({ ...commonData, id: `task-${Date.now()}`, createdAt: new Date().toISOString(), completed: false, completedAt: null }); } await dataService.saveData(state); hideHiddenView('form'); if (views.details.classList.contains('active')) { renderTaskDetails(); } else { renderDashboard(); renderTasksView(); } });
     if(buttons.addSubject) buttons.addSubject.addEventListener('click', openNewSubjectForm);
     if(buttons.cancelSubjectForm) buttons.cancelSubjectForm.addEventListener('click', () => showSubjectForm(false));
     if(formElements.subjectForm) formElements.subjectForm.addEventListener('submit', async (e) => { e.preventDefault(); const name = formElements.subjectName.value.trim(); if (!name) return; const subjectData = { name, day: parseInt(formElements.subjectDay.value), startTime: formElements.subjectStartTime.value, endTime: formElements.subjectEndTime.value }; if (state.selectedSubjectId) { const index = state.schedule.findIndex(s => s.id === state.selectedSubjectId); if (index > -1) { const originalSubject = state.schedule[index]; state.schedule[index] = { ...originalSubject, ...subjectData }; } } else { state.schedule.push({ ...subjectData, id: `sub-${Date.now()}`, grades: [] }); } await dataService.saveData(state); showSubjectForm(false); renderSchedule(); });
