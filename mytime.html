@@ -196,28 +196,31 @@
             
             <!-- Vista de Configuración del Modo Zen -->
             <section id="zen-setup-view" class="view hidden-view">
-                <div class="modal-panel w-full max-w-2xl">
-                    <h1 class="font-heading text-3xl md:text-4xl text-center mb-8 title-line">Configurar Sesión Zen</h1>
-                    <div class="flex justify-center mb-8">
-                        <div class="flex border border-border-color rounded-lg p-1">
-                            <button id="zen-mode-timer-btn" class="btn zen-mode-toggle active">Temporizador</button>
-                            <button id="zen-mode-stopwatch-btn" class="btn zen-mode-toggle">Cronómetro</button>
+                <div class="modal-panel w-full max-w-2xl flex flex-col max-h-[90vh]">
+                    <h1 class="font-heading text-3xl md:text-4xl text-center mb-6 title-line flex-shrink-0">Configurar Sesión Zen</h1>
+                    
+                    <div class="flex-grow overflow-y-auto custom-scrollbar pr-2 -mr-2">
+                        <div class="flex justify-center mb-8">
+                            <div class="flex border border-border-color rounded-lg p-1">
+                                <button id="zen-mode-timer-btn" class="btn zen-mode-toggle active">Temporizador</button>
+                                <button id="zen-mode-stopwatch-btn" class="btn zen-mode-toggle">Cronómetro</button>
+                            </div>
+                        </div>
+
+                        <!-- Formulario para Temporizador -->
+                        <form id="zen-timer-form" class="space-y-6">
+                            <div><label for="zen-pomodoro-duration" class="font-bold block mb-2 text-sm">Enfoque (min)</label><input type="number" id="zen-pomodoro-duration" class="input-field" min="1" value="25"></div>
+                            <div><label for="zen-short-break-duration" class="font-bold block mb-2 text-sm">Descanso Corto (min)</label><input type="number" id="zen-short-break-duration" class="input-field" min="1" value="5"></div>
+                            <div><label for="zen-long-break-duration" class="font-bold block mb-2 text-sm">Descanso Largo (min)</label><input type="number" id="zen-long-break-duration" class="input-field" min="1" value="15"></div>
+                        </form>
+
+                        <!-- Contenido para Cronómetro -->
+                        <div id="zen-stopwatch-content" class="hidden text-center">
+                            <p class="text-secondary mb-6">El cronómetro comenzará a contar sin límites de tiempo. La barra de progreso avanzará cada minuto.</p>
                         </div>
                     </div>
-
-                    <!-- Formulario para Temporizador -->
-                    <form id="zen-timer-form" class="space-y-6">
-                        <div><label for="zen-pomodoro-duration" class="font-bold block mb-2 text-sm">Enfoque (min)</label><input type="number" id="zen-pomodoro-duration" class="input-field" min="1" value="25"></div>
-                        <div><label for="zen-short-break-duration" class="font-bold block mb-2 text-sm">Descanso Corto (min)</label><input type="number" id="zen-short-break-duration" class="input-field" min="1" value="5"></div>
-                        <div><label for="zen-long-break-duration" class="font-bold block mb-2 text-sm">Descanso Largo (min)</label><input type="number" id="zen-long-break-duration" class="input-field" min="1" value="15"></div>
-                    </form>
-
-                    <!-- Contenido para Cronómetro -->
-                    <div id="zen-stopwatch-content" class="hidden text-center">
-                        <p class="text-secondary mb-6">El cronómetro comenzará a contar sin límites de tiempo. La barra de progreso avanzará cada minuto.</p>
-                    </div>
                     
-                    <div class="flex gap-4 mt-8">
+                    <div class="flex gap-4 mt-8 flex-shrink-0">
                         <button id="start-zen-btn" class="flex-1 btn btn-primary text-xl">Iniciar</button>
                         <button id="cancel-zen-setup-btn" class="flex-1 btn">Cancelar</button>
                     </div>
