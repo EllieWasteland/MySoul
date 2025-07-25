@@ -399,7 +399,7 @@
     <!-- Main Application Logic Script -->
     <script>
         // --- CONFIGURATION ---
-        const GOOGLE_CLIENT_ID = 'TU_ID_DE_CLIENTE_VA_AQUÍ';
+        const GOOGLE_CLIENT_ID = '1063461541386-7cp2r8p1fr0ovp2aloog1lg4m31ngcr5.apps.googleusercontent.com';
 
         // --- DATA MANAGER ---
         const UNIFIED_STORAGE_KEY = 'mySoul-data-v1';
@@ -441,7 +441,7 @@
             } catch (error) { console.error('Error inicializando el cliente GAPI:', error); }
         }
         function gisLoaded() {
-            if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID === '1063461541386-7cp2r8p1fr0ovp2aloog1lg4m31ngcr5.apps.googleusercontent.com') {
+            if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID === 'TU_ID_DE_CLIENTE_VA_AQUÍ') {
                 console.error("El ID de cliente de Google no está configurado.");
                 return;
             }
@@ -514,7 +514,6 @@
             if (!fileId) {
                 console.log("No se encontró archivo de backup en Drive.");
                 if (isFirstLogin) {
-                    // **FIX:** Don't finish onboarding. Instead, proceed to the name step.
                     showStep(2); 
                 }
                 return;
@@ -602,7 +601,6 @@
                     const unifiedData = getUnifiedData();
                     unifiedData.globalSettings.onboardingComplete = true;
                     saveUnifiedData(unifiedData);
-                    // **FIX:** Initialize lock screen logic only AFTER the main container is visible
                     initializeLockScreen(); 
                 }, 400); 
                 setTimeout(() => { transitionOverlay.style.display = 'none'; }, 1200);
