@@ -174,14 +174,16 @@
             position: relative;
             border: 1px solid var(--border-color);
             padding: 0;
-            transition: border-color 0.3s, background-color 0.3s, opacity 0.3s, max-height 0.5s ease;
+            transition: border-color 0.3s, background-color 0.3s, opacity 0.3s, max-height 0.5s ease, padding 0.5s ease, margin 0.5s ease;
             overflow: hidden;
         }
         .hud-item.hidden {
-            max-height: 0;
-            padding: 0;
-            border: none;
-            opacity: 0;
+            max-height: 0 !important;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+            margin-top: 0 !important;
+            border: none !important;
+            opacity: 0 !important;
         }
         .hud-item > .hud-button, .hud-item > .input-field {
             width: 100%;
@@ -226,18 +228,14 @@
 <body>
     <!-- Onboarding Section -->
     <div id="onboarding-container">
-        <!-- Step 1: Login Choice -->
+        <!-- Step 1: Welcome -->
         <div id="onboarding-step-1" class="onboarding-step">
             <h2 class="onboarding-title">MySoul</h2>
-            <p class="onboarding-text">Elige cómo quieres continuar. Tus datos se pueden sincronizar más tarde.</p>
+            <p class="onboarding-text">Bienvenido a tu sistema operativo personal. Comencemos con la configuración local.</p>
             <div class="mt-8 space-y-4 max-w-sm mx-auto w-full">
                 <div class="hud-item">
                     <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
-                    <button id="google-login-btn" class="hud-button">Iniciar con Google</button>
-                </div>
-                <div class="hud-item">
-                    <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
-                    <button id="local-continue-btn" class="hud-button">Continuar en modo local</button>
+                    <button id="local-continue-btn" class="hud-button">Comenzar Configuración</button>
                 </div>
             </div>
         </div>
@@ -348,18 +346,26 @@
                         <h2 class="section-title">Ajustes</h2>
                         <p class="section-description">Gestiona los datos de tu sistema operativo personal.</p>
                         <div class="mt-8 space-y-4 max-w-sm mx-auto">
-                            <!-- Google Drive Buttons -->
-                            <div id="google-drive-buttons-container" class="space-y-4">
+                            <!-- Google Drive Section -->
+                            <div id="google-drive-sync-item" class="hud-item">
+                                <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
+                                <button id="google-sync-btn" class="hud-button">Sincronizar con Google Drive</button>
+                            </div>
+                            <div id="google-drive-actions" class="space-y-4">
                                 <div id="save-to-drive-item" class="hud-item hidden">
                                     <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
                                     <button id="save-to-drive-btn" class="hud-button">Guardar en Drive</button>
                                 </div>
+                                <div id="load-from-drive-item" class="hud-item hidden">
+                                    <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
+                                    <button id="load-from-drive-btn" class="hud-button">Cargar desde Drive</button>
+                                </div>
                                 <div id="sign-out-item" class="hud-item hidden">
                                     <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
-                                    <button id="sign-out-btn" class="hud-button">Cerrar Sesión de Google</button>
+                                    <button id="sign-out-btn" class="hud-button">Cerrar Sesión</button>
                                 </div>
                             </div>
-                            <!-- Local Data Buttons -->
+                            <!-- Local Data Section -->
                             <div class="hud-item">
                                 <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
                                 <button id="export-data-btn" class="hud-button">Exportar Datos Locales</button>
@@ -454,7 +460,7 @@
         }
         function handleAuthClick() {
             if (!tokenClient) {
-                showModalAlert("El servicio de Google no se ha inicializado correctamente. Revisa la configuración del ID de cliente.", "Error de Configuración");
+                showModalAlert("El servicio de Google no se ha inicializado correctamente.", "Error de Configuración");
                 return;
             }
             tokenClient.callback = async (resp) => {
@@ -465,8 +471,7 @@
                 }
                 isUserLoggedIn = true;
                 console.log('¡Inicio de sesión exitoso!');
-                updateUiForLoggedInState();
-                await loadDataFromDrive(true); 
+                updateGoogleDriveUI();
             };
             if (gapi.client.getToken() === null) {
                 tokenClient.requestAccessToken({ prompt: 'consent' });
@@ -481,7 +486,8 @@
                     gapi.client.setToken('');
                     isUserLoggedIn = false;
                     console.log('Sesión cerrada.');
-                    updateUiForLoggedOutState();
+                    updateGoogleDriveUI();
+                    showModalAlert("Has cerrado tu sesión de Google.", "Sesión Cerrada");
                 });
             }
         }
@@ -498,14 +504,7 @@
             const boundary = '-------314159265358979323846';
             const delimiter = `\r\n--${boundary}\r\n`;
             const close_delim = `\r\n--${boundary}--`;
-            
-            // **FIX:** Added 'parents' property to explicitly save in the App Data Folder.
-            const metadata = {
-                'name': BACKUP_FILENAME,
-                'mimeType': 'application/json',
-                'parents': ['appDataFolder'] 
-            };
-
+            const metadata = { 'name': BACKUP_FILENAME, 'mimeType': 'application/json', 'parents': ['appDataFolder'] };
             const requestBody = delimiter + 'Content-Type: application/json\r\n\r\n' + JSON.stringify(metadata) + delimiter + 'Content-Type: application/json\r\n\r\n' + fileContent + close_delim;
             const path = `/upload/drive/v3/files${fileId ? `/${fileId}` : ''}`;
             const method = fileId ? 'PATCH' : 'POST';
@@ -515,14 +514,11 @@
                 showModalAlert("Copia de seguridad guardada en Google Drive.");
             } catch (error) { console.error("Error al guardar en Drive:", error); showModalAlert("Error al guardar la copia de seguridad.", "Error"); }
         }
-        async function loadDataFromDrive(isFirstLogin = false) {
-            if (!isUserLoggedIn) return;
+        async function loadDataFromDrive() {
+            if (!isUserLoggedIn) { showModalAlert("Debes iniciar sesión con Google para cargar desde la nube.", "No has iniciado sesión"); return; }
             const fileId = await findBackupFile();
             if (!fileId) {
-                console.log("No se encontró archivo de backup en Drive.");
-                if (isFirstLogin) {
-                    showStep(2); 
-                }
+                showModalAlert("No se encontró ninguna copia de seguridad en tu Google Drive.", "Sin Datos");
                 return;
             }
             try {
@@ -533,7 +529,7 @@
                     showModalAlert("Datos restaurados. La aplicación se recargará.", "Éxito");
                     setTimeout(() => window.location.reload(), 2000);
                 };
-                showModalConfirm("Se encontró una copia de seguridad en la nube. ¿Deseas restaurarla? Se sobreescribirán tus datos locales.", onConfirm, "Restaurar Copia");
+                showModalConfirm("¿Restaurar la copia de seguridad de la nube? Se sobreescribirán tus datos locales.", onConfirm, "Restaurar Copia");
             } catch (error) { console.error("Error cargando datos desde Drive:", error); showModalAlert("No se pudo cargar la copia de seguridad desde la nube.", "Error"); }
         }
 
@@ -567,7 +563,6 @@
             const onboardingContainer = document.getElementById('onboarding-container');
             const mainAppContainer = document.getElementById('main-app-container');
             const localContinueBtn = document.getElementById('local-continue-btn');
-            const googleLoginBtn = document.getElementById('google-login-btn');
             const usernameInput = document.getElementById('username-input');
             const confirmNameBtn = document.getElementById('confirm-name-btn');
             const commitmentUsername = document.getElementById('commitment-username');
@@ -576,9 +571,14 @@
             const exportBtn = document.getElementById('export-data-btn');
             const importBtn = document.getElementById('import-data-btn');
             const importFileInput = document.getElementById('import-file-input');
+            
+            const googleSyncBtnItem = document.getElementById('google-drive-sync-item');
+            const googleSyncBtn = document.getElementById('google-sync-btn');
             const saveToDriveBtn = document.getElementById('save-to-drive-btn');
+            const loadFromDriveBtn = document.getElementById('load-from-drive-btn');
             const signOutBtn = document.getElementById('sign-out-btn');
             const saveToDriveItem = document.getElementById('save-to-drive-item');
+            const loadFromDriveItem = document.getElementById('load-from-drive-item');
             const signOutItem = document.getElementById('sign-out-item');
             
             // --- MODAL HELPERS ---
@@ -609,19 +609,15 @@
             };
 
             // --- UI STATE MANAGEMENT ---
-            window.updateUiForLoggedInState = () => {
-                saveToDriveItem.classList.remove('hidden');
-                signOutItem.classList.remove('hidden');
-            };
-            window.updateUiForLoggedOutState = () => {
-                saveToDriveItem.classList.add('hidden');
-                signOutItem.classList.add('hidden');
-                showModalAlert("Has cerrado tu sesión de Google.", "Sesión Cerrada");
+            window.updateGoogleDriveUI = () => {
+                googleSyncBtnItem.classList.toggle('hidden', isUserLoggedIn);
+                saveToDriveItem.classList.toggle('hidden', !isUserLoggedIn);
+                loadFromDriveItem.classList.toggle('hidden', !isUserLoggedIn);
+                signOutItem.classList.toggle('hidden', !isUserLoggedIn);
             };
 
             // --- ONBOARDING LOGIC ---
             localContinueBtn.addEventListener('click', () => showStep(2));
-            googleLoginBtn.addEventListener('click', handleAuthClick);
             confirmNameBtn.addEventListener('click', () => {
                 const username = usernameInput.value.trim();
                 if (username) {
@@ -639,15 +635,10 @@
             fingerprintButton.addEventListener('mouseleave', endHold);
             fingerprintButton.addEventListener('touchstart', startHold, { passive: true });
             fingerprintButton.addEventListener('touchend', endHold);
-            async function startHold(e) { 
+            function startHold(e) { 
                 e.preventDefault(); 
                 fingerprintButton.classList.add('holding'); 
-                holdTimeout = setTimeout(async () => {
-                    if(isUserLoggedIn) {
-                        await saveDataToDrive();
-                    }
-                    finishOnboarding();
-                }, 2000); 
+                holdTimeout = setTimeout(finishOnboarding, 2000); 
             }
             function endHold() { fingerprintButton.classList.remove('holding'); clearTimeout(holdTimeout); }
 
@@ -718,7 +709,9 @@
                 event.target.value = '';
             });
 
+            googleSyncBtn.addEventListener('click', handleAuthClick);
             saveToDriveBtn.addEventListener('click', saveDataToDrive);
+            loadFromDriveBtn.addEventListener('click', loadDataFromDrive);
             signOutBtn.addEventListener('click', handleSignoutClick);
             
             function initializeApp() {
@@ -726,12 +719,13 @@
                 if (unifiedData.globalSettings.onboardingComplete) {
                     onboardingContainer.style.display = 'none';
                     mainAppContainer.style.display = 'block';
-                    initializeLockScreen(); // Initialize lock screen for returning users
+                    initializeLockScreen();
                 } else {
                     onboardingContainer.style.display = 'block';
                     mainAppContainer.style.display = 'none';
                     showStep(1);
                 }
+                updateGoogleDriveUI(); // Set initial state of Google Drive buttons
             }
 
             initializeApp();
