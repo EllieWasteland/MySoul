@@ -181,13 +181,14 @@
                         </div>
                     </div>
 
-                    <div class="flex justify-between items-center mt-8 pt-4 border-t border-border-color">
-                        <button id="form-cancel-btn" class="btn">Cancelar</button>
-                        <div class="flex items-center gap-2">
-                            <button id="form-back-btn" class="btn">Atrás</button>
-                            <button id="form-skip-btn" class="btn">Omitir</button>
-                            <button id="form-next-btn" class="btn btn-primary">Siguiente</button>
+                    <!-- Contenedor de botones de navegación del formulario (MODIFICADO) -->
+                    <div class="flex flex-col gap-4 mt-8 pt-4 border-t border-border-color">
+                        <div class="flex flex-wrap gap-2">
+                            <button id="form-cancel-btn" class="btn flex-grow" style="flex-basis: 120px;">Cancelar</button>
+                            <button id="form-back-btn" class="btn flex-grow" style="flex-basis: 120px;">Atrás</button>
+                            <button id="form-skip-btn" class="btn flex-grow" style="flex-basis: 120px;">Omitir</button>
                         </div>
+                        <button id="form-next-btn" class="btn btn-primary w-full text-lg">Siguiente</button>
                     </div>
                 </div>
             </section>
