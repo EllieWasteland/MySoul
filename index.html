@@ -143,7 +143,7 @@
         .snap-section.exiting .section-container { opacity: 0; transform: scale(1.1); transition: opacity 0.4s ease, transform 0.4s ease; }
 
         .section-container { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between; align-items: center; transition: opacity 0.4s ease, transform 0.4s ease; }
-        .section-content { text-align: center; width: 100%; max-width: 600px; padding-top: 10vh; opacity: 0; transform: translateY(20px); animation: content-fade-in 0.8s 0.2s forwards; }
+        .section-content { text-align: center; width: 100%; max-w: 600px; padding-top: 10vh; opacity: 0; transform: translateY(20px); animation: content-fade-in 0.8s 0.2s forwards; }
         @keyframes content-fade-in { to { opacity: 1; transform: translateY(0); } }
         .section-title { font-family: 'Bitcount Prop Single', sans-serif; font-size: 5rem; font-weight: 600; letter-spacing: -0.03em; line-height: 1; color: var(--text-primary); transition: font-size 0.3s ease; }
         .section-description { font-size: 1.125rem; color: var(--text-secondary); margin-top: 1rem; }
@@ -398,11 +398,10 @@
 
     <!-- Main Application Logic Script -->
     <script>
-        // --- CONFIGURATION (replaces config.js) ---
-        // ¡IMPORTANTE! Pega aquí tu ID de Cliente de OAuth 2.0.
-        const GOOGLE_CLIENT_ID = '1063461541386-7cp2r8p1fr0ovp2aloog1lg4m31ngcr5.apps.googleusercontent.com';
+        // --- CONFIGURATION ---
+        const GOOGLE_CLIENT_ID = 'TU_ID_DE_CLIENTE_VA_AQUÍ';
 
-        // --- DATA MANAGER (replaces data-manager.js) ---
+        // --- DATA MANAGER ---
         const UNIFIED_STORAGE_KEY = 'mySoul-data-v1';
         function getDefaultUnifiedState() {
             return {
@@ -428,7 +427,7 @@
             }
         }
         
-        // --- GOOGLE DRIVE LOGIC (replaces google-drive.js) ---
+        // --- GOOGLE DRIVE LOGIC ---
         const SCOPES = 'https://www.googleapis.com/auth/drive.appdata';
         const BACKUP_FILENAME = 'mysoul_backup.json';
         let tokenClient;
@@ -442,6 +441,10 @@
             } catch (error) { console.error('Error inicializando el cliente GAPI:', error); }
         }
         function gisLoaded() {
+            if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID === '1063461541386-7cp2r8p1fr0ovp2aloog1lg4m31ngcr5.apps.googleusercontent.com') {
+                console.error("El ID de cliente de Google no está configurado.");
+                return;
+            }
             tokenClient = google.accounts.oauth2.initTokenClient({
                 client_id: GOOGLE_CLIENT_ID,
                 scope: SCOPES,
@@ -450,6 +453,10 @@
             console.log('Cliente de identidad de Google inicializado.');
         }
         function handleAuthClick() {
+            if (!tokenClient) {
+                showModalAlert("El servicio de Google no se ha inicializado correctamente. Revisa la configuración del ID de cliente.", "Error de Configuración");
+                return;
+            }
             tokenClient.callback = async (resp) => {
                 if (resp.error !== undefined) {
                     console.error('Error de autenticación:', resp);
@@ -459,7 +466,7 @@
                 isUserLoggedIn = true;
                 console.log('¡Inicio de sesión exitoso!');
                 updateUiForLoggedInState();
-                await loadDataFromDrive(true); // true para indicar que es el primer login
+                await loadDataFromDrive(true); 
             };
             if (gapi.client.getToken() === null) {
                 tokenClient.requestAccessToken({ prompt: 'consent' });
@@ -507,8 +514,8 @@
             if (!fileId) {
                 console.log("No se encontró archivo de backup en Drive.");
                 if (isFirstLogin) {
-                    await saveDataToDrive(); // Guarda la data local actual en la nube la primera vez.
-                    finishOnboarding(); // Continúa al hub
+                    // **FIX:** Don't finish onboarding. Instead, proceed to the name step.
+                    showStep(2); 
                 }
                 return;
             }
@@ -520,11 +527,7 @@
                     showModalAlert("Datos restaurados. La aplicación se recargará.", "Éxito");
                     setTimeout(() => window.location.reload(), 2000);
                 };
-                if (isFirstLogin) { // Si es el primer login, restaura sin preguntar
-                     onConfirm();
-                } else {
-                    showModalConfirm("Se encontró una copia de seguridad en la nube. ¿Deseas restaurarla? Se sobreescribirán tus datos locales.", onConfirm, "Restaurar Copia");
-                }
+                showModalConfirm("Se encontró una copia de seguridad en la nube. ¿Deseas restaurarla? Se sobreescribirán tus datos locales.", onConfirm, "Restaurar Copia");
             } catch (error) { console.error("Error cargando datos desde Drive:", error); showModalAlert("No se pudo cargar la copia de seguridad desde la nube.", "Error"); }
         }
 
@@ -541,10 +544,6 @@
             const commitmentUsername = document.getElementById('commitment-username');
             const fingerprintButton = document.getElementById('fingerprint-button');
             const transitionOverlay = document.getElementById('transition-overlay');
-            const lockScreen = document.getElementById('lock-screen');
-            const timeDisplay = document.getElementById('lock-screen-time');
-            const dateDisplay = document.getElementById('lock-screen-date');
-            const sliderHandle = document.getElementById('slider-handle');
             const sections = document.querySelectorAll('.snap-section');
             const exportBtn = document.getElementById('export-data-btn');
             const importBtn = document.getElementById('import-data-btn');
@@ -594,7 +593,8 @@
 
             // --- ONBOARDING LOGIC ---
             function showStep(stepNumber) { Object.values(steps).forEach(step => step.classList.remove('active')); if (steps[stepNumber]) steps[stepNumber].classList.add('active'); }
-            window.finishOnboarding = () => {
+            
+            function finishOnboarding() {
                 transitionOverlay.classList.add('expand');
                 setTimeout(() => {
                     onboardingContainer.style.display = 'none';
@@ -602,6 +602,8 @@
                     const unifiedData = getUnifiedData();
                     unifiedData.globalSettings.onboardingComplete = true;
                     saveUnifiedData(unifiedData);
+                    // **FIX:** Initialize lock screen logic only AFTER the main container is visible
+                    initializeLockScreen(); 
                 }, 400); 
                 setTimeout(() => { transitionOverlay.style.display = 'none'; }, 1200);
             };
@@ -625,26 +627,47 @@
             fingerprintButton.addEventListener('mouseleave', endHold);
             fingerprintButton.addEventListener('touchstart', startHold, { passive: true });
             fingerprintButton.addEventListener('touchend', endHold);
-            function startHold(e) { e.preventDefault(); fingerprintButton.classList.add('holding'); holdTimeout = setTimeout(finishOnboarding, 2000); }
+            async function startHold(e) { 
+                e.preventDefault(); 
+                fingerprintButton.classList.add('holding'); 
+                holdTimeout = setTimeout(async () => {
+                    if(isUserLoggedIn) {
+                        await saveDataToDrive();
+                    }
+                    finishOnboarding();
+                }, 2000); 
+            }
             function endHold() { fingerprintButton.classList.remove('holding'); clearTimeout(holdTimeout); }
 
             // --- MAIN APP LOGIC ---
-            function updateClock() {
-                const now = new Date();
-                timeDisplay.textContent = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false });
-                dateDisplay.textContent = now.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+            function initializeLockScreen() {
+                const lockScreen = document.getElementById('lock-screen');
+                const timeDisplay = document.getElementById('lock-screen-time');
+                const dateDisplay = document.getElementById('lock-screen-date');
+                const sliderHandle = document.getElementById('slider-handle');
+                const sliderContainer = document.getElementById('slider-container');
+
+                function updateClock() {
+                    const now = new Date();
+                    timeDisplay.textContent = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false });
+                    dateDisplay.textContent = now.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+                }
+                let isDragging = false, startX = 0;
+                function startDrag(e) { isDragging = true; startX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX; sliderHandle.style.cursor = 'grabbing'; sliderHandle.style.transition = 'none'; }
+                function onDrag(e) { if (!isDragging) return; e.preventDefault(); const currentX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX; let moveX = currentX - startX; const maxMove = sliderContainer.offsetWidth - sliderHandle.offsetWidth; moveX = Math.max(0, Math.min(moveX, maxMove)); sliderHandle.style.transform = `translateX(${moveX}px)`; if (moveX >= maxMove - 5) unlock(); }
+                function endDrag() { if (!isDragging) return; isDragging = false; sliderHandle.style.cursor = 'grab'; sliderHandle.style.transition = 'transform 0.3s ease'; sliderHandle.style.transform = 'translateX(0px)'; }
+                function unlock() { if (!lockScreen.classList.contains('unlocked')) lockScreen.classList.add('unlocked'); isDragging = false; }
+                
+                sliderHandle.addEventListener('mousedown', startDrag);
+                document.addEventListener('mousemove', onDrag);
+                document.addEventListener('mouseup', endDrag);
+                sliderHandle.addEventListener('touchstart', startDrag, { passive: false });
+                document.addEventListener('touchmove', onDrag, { passive: false });
+                document.addEventListener('touchend', endDrag);
+
+                updateClock();
+                setInterval(updateClock, 1000);
             }
-            let isDragging = false, startX = 0;
-            function startDrag(e) { isDragging = true; startX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX; sliderHandle.style.cursor = 'grabbing'; sliderHandle.style.transition = 'none'; }
-            function onDrag(e) { if (!isDragging) return; e.preventDefault(); const currentX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX; let moveX = currentX - startX; const maxMove = sliderContainer.offsetWidth - sliderHandle.offsetWidth; moveX = Math.max(0, Math.min(moveX, maxMove)); sliderHandle.style.transform = `translateX(${moveX}px)`; if (moveX >= maxMove - 5) unlock(); }
-            function endDrag() { if (!isDragging) return; isDragging = false; sliderHandle.style.cursor = 'grab'; sliderHandle.style.transition = 'transform 0.3s ease'; sliderHandle.style.transform = 'translateX(0px)'; }
-            function unlock() { if (!lockScreen.classList.contains('unlocked')) lockScreen.classList.add('unlocked'); isDragging = false; }
-            sliderHandle.addEventListener('mousedown', startDrag);
-            document.addEventListener('mousemove', onDrag);
-            document.addEventListener('mouseup', endDrag);
-            sliderHandle.addEventListener('touchstart', startDrag, { passive: false });
-            document.addEventListener('touchmove', onDrag, { passive: false });
-            document.addEventListener('touchend', endDrag);
 
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => entry.target.classList.toggle('visible', entry.isIntersecting));
@@ -691,13 +714,12 @@
                 if (unifiedData.globalSettings.onboardingComplete) {
                     onboardingContainer.style.display = 'none';
                     mainAppContainer.style.display = 'block';
+                    initializeLockScreen(); // Initialize lock screen for returning users
                 } else {
                     onboardingContainer.style.display = 'block';
                     mainAppContainer.style.display = 'none';
                     showStep(1);
                 }
-                updateClock();
-                setInterval(updateClock, 1000);
             }
 
             initializeApp();
