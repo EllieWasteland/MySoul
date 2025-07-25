@@ -349,20 +349,20 @@
                             <!-- Google Drive Section -->
                             <div id="google-drive-sync-item" class="hud-item">
                                 <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
-                                <button id="google-sync-btn" class="hud-button">Sincronizar con Google Drive</button>
+                                <button id="google-sync-btn" class="hud-button">Conectar con Google Drive</button>
                             </div>
                             <div id="google-drive-actions" class="space-y-4">
                                 <div id="save-to-drive-item" class="hud-item hidden">
                                     <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
-                                    <button id="save-to-drive-btn" class="hud-button">Guardar en Drive</button>
+                                    <button id="save-to-drive-btn" class="hud-button">Guardar Copia de Seguridad</button>
                                 </div>
                                 <div id="load-from-drive-item" class="hud-item hidden">
                                     <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
-                                    <button id="load-from-drive-btn" class="hud-button">Cargar desde Drive</button>
+                                    <button id="load-from-drive-btn" class="hud-button">Cargar Copia de Seguridad</button>
                                 </div>
-                                <div id="sign-out-item" class="hud-item hidden">
+                                <div id="delete-from-drive-item" class="hud-item hidden">
                                     <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
-                                    <button id="sign-out-btn" class="hud-button">Cerrar Sesión</button>
+                                    <button id="delete-from-drive-btn" class="hud-button">Eliminar Copia de la Nube</button>
                                 </div>
                             </div>
                             <!-- Local Data Section -->
@@ -437,7 +437,6 @@
         const SCOPES = 'https://www.googleapis.com/auth/drive.appdata';
         const BACKUP_FILENAME = 'mysoul_backup.json';
         let tokenClient;
-        let isUserLoggedIn = false;
 
         function gapiLoaded() { gapi.load('client', initializeGapiClient); }
         async function initializeGapiClient() {
@@ -458,7 +457,8 @@
             });
             console.log('Cliente de identidad de Google inicializado.');
         }
-        function handleAuthClick() {
+        
+        function handleAuthClick(onSuccess) {
             if (!tokenClient) {
                 showModalAlert("El servicio de Google no se ha inicializado correctamente.", "Error de Configuración");
                 return;
@@ -469,9 +469,8 @@
                     showModalAlert('Hubo un error durante el inicio de sesión.', 'Error');
                     throw (resp);
                 }
-                isUserLoggedIn = true;
-                console.log('¡Inicio de sesión exitoso!');
-                updateGoogleDriveUI();
+                console.log('¡Inicio de sesión temporal exitoso!');
+                if (onSuccess) onSuccess();
             };
             if (gapi.client.getToken() === null) {
                 tokenClient.requestAccessToken({ prompt: 'consent' });
@@ -479,58 +478,82 @@
                 tokenClient.requestAccessToken({ prompt: '' });
             }
         }
-        function handleSignoutClick() {
+
+        function signOut(callback) {
             const token = gapi.client.getToken();
             if (token !== null) {
                 google.accounts.oauth2.revoke(token.access_token, () => {
                     gapi.client.setToken('');
-                    isUserLoggedIn = false;
-                    console.log('Sesión cerrada.');
-                    updateGoogleDriveUI();
-                    showModalAlert("Has cerrado tu sesión de Google.", "Sesión Cerrada");
+                    console.log('Sesión temporal cerrada.');
+                    if (callback) callback();
                 });
             }
         }
+
         async function findBackupFile() {
             try {
                 const response = await gapi.client.drive.files.list({ spaces: 'appDataFolder', fields: 'files(id, name)', pageSize: 10 });
                 return response.result.files.find(file => file.name === BACKUP_FILENAME)?.id || null;
             } catch (error) { console.error("Error buscando el archivo de backup:", error); return null; }
         }
-        async function saveDataToDrive() {
-            if (!isUserLoggedIn) { showModalAlert("Debes iniciar sesión con Google para guardar en la nube.", "No has iniciado sesión"); return; }
-            const fileContent = JSON.stringify(getUnifiedData());
-            const fileId = await findBackupFile();
-            const boundary = '-------314159265358979323846';
-            const delimiter = `\r\n--${boundary}\r\n`;
-            const close_delim = `\r\n--${boundary}--`;
-            const metadata = { 'name': BACKUP_FILENAME, 'mimeType': 'application/json', 'parents': ['appDataFolder'] };
-            const requestBody = delimiter + 'Content-Type: application/json\r\n\r\n' + JSON.stringify(metadata) + delimiter + 'Content-Type: application/json\r\n\r\n' + fileContent + close_delim;
-            const path = `/upload/drive/v3/files${fileId ? `/${fileId}` : ''}`;
-            const method = fileId ? 'PATCH' : 'POST';
-            try {
-                await gapi.client.request({ 'path': path, 'method': method, 'params': { 'uploadType': 'multipart' }, 'headers': { 'Content-Type': `multipart/related; boundary="${boundary}"` }, 'body': requestBody });
-                console.log("Datos guardados con éxito en Drive.");
-                showModalAlert("Copia de seguridad guardada en Google Drive.");
-            } catch (error) { console.error("Error al guardar en Drive:", error); showModalAlert("Error al guardar la copia de seguridad.", "Error"); }
+
+        function saveDataToDrive() {
+            handleAuthClick(async () => {
+                const fileContent = JSON.stringify(getUnifiedData());
+                const fileId = await findBackupFile();
+                const boundary = '-------314159265358979323846';
+                const delimiter = `\r\n--${boundary}\r\n`;
+                const close_delim = `\r\n--${boundary}--`;
+                const metadata = { 'name': BACKUP_FILENAME, 'mimeType': 'application/json' };
+                if (!fileId) {
+                    metadata.parents = ['appDataFolder'];
+                }
+                const requestBody = delimiter + 'Content-Type: application/json\r\n\r\n' + JSON.stringify(metadata) + delimiter + 'Content-Type: application/json\r\n\r\n' + fileContent + close_delim;
+                const path = `/upload/drive/v3/files${fileId ? `/${fileId}` : ''}`;
+                const method = fileId ? 'PATCH' : 'POST';
+                try {
+                    await gapi.client.request({ 'path': path, 'method': method, 'params': { 'uploadType': 'multipart' }, 'headers': { 'Content-Type': `multipart/related; boundary="${boundary}"` }, 'body': requestBody });
+                    showModalAlert("Copia de seguridad guardada en Google Drive.", "Éxito", () => signOut());
+                } catch (error) { console.error("Error al guardar en Drive:", error); showModalAlert("Error al guardar la copia de seguridad.", "Error", () => signOut()); }
+            });
         }
-        async function loadDataFromDrive() {
-            if (!isUserLoggedIn) { showModalAlert("Debes iniciar sesión con Google para cargar desde la nube.", "No has iniciado sesión"); return; }
-            const fileId = await findBackupFile();
-            if (!fileId) {
-                showModalAlert("No se encontró ninguna copia de seguridad en tu Google Drive.", "Sin Datos");
-                return;
-            }
-            try {
-                const response = await gapi.client.drive.files.get({ fileId: fileId, alt: 'media' });
-                const cloudData = response.result;
-                const onConfirm = () => {
-                    saveUnifiedData(cloudData);
-                    showModalAlert("Datos restaurados. La aplicación se recargará.", "Éxito");
-                    setTimeout(() => window.location.reload(), 2000);
-                };
-                showModalConfirm("¿Restaurar la copia de seguridad de la nube? Se sobreescribirán tus datos locales.", onConfirm, "Restaurar Copia");
-            } catch (error) { console.error("Error cargando datos desde Drive:", error); showModalAlert("No se pudo cargar la copia de seguridad desde la nube.", "Error"); }
+
+        function loadDataFromDrive() {
+            handleAuthClick(async () => {
+                const fileId = await findBackupFile();
+                if (!fileId) {
+                    showModalAlert("No se encontró ninguna copia de seguridad en tu Google Drive.", "Sin Datos", () => signOut());
+                    return;
+                }
+                try {
+                    const response = await gapi.client.drive.files.get({ fileId: fileId, alt: 'media' });
+                    const cloudData = response.result;
+                    showModalConfirm("¿Restaurar la copia de seguridad? Se sobreescribirán tus datos locales.", () => {
+                        saveUnifiedData(cloudData);
+                        showModalAlert("Datos restaurados. La aplicación se recargará.", "Éxito");
+                        setTimeout(() => window.location.reload(), 2000);
+                    }, "Restaurar Copia", () => signOut());
+                } catch (error) { console.error("Error cargando datos desde Drive:", error); showModalAlert("No se pudo cargar la copia de seguridad.", "Error", () => signOut()); }
+            });
+        }
+        
+        function deleteBackupFromDrive() {
+            handleAuthClick(async () => {
+                const fileId = await findBackupFile();
+                if (!fileId) {
+                    showModalAlert("No hay ninguna copia de seguridad para eliminar.", "Sin Datos", () => signOut());
+                    return;
+                }
+                showModalConfirm("¿Seguro que quieres eliminar permanentemente tu copia de seguridad de la nube?", async () => {
+                    try {
+                        await gapi.client.drive.files.delete({ fileId: fileId });
+                        showModalAlert("La copia de seguridad ha sido eliminada de la nube.", "Éxito", () => signOut());
+                    } catch (error) {
+                        console.error("Error al eliminar el archivo:", error);
+                        showModalAlert("No se pudo eliminar la copia de seguridad.", "Error", () => signOut());
+                    }
+                }, "Confirmar Eliminación", () => signOut());
+            });
         }
 
         // --- GLOBAL HELPER FUNCTIONS ---
@@ -572,14 +595,10 @@
             const importBtn = document.getElementById('import-data-btn');
             const importFileInput = document.getElementById('import-file-input');
             
-            const googleSyncBtnItem = document.getElementById('google-drive-sync-item');
             const googleSyncBtn = document.getElementById('google-sync-btn');
             const saveToDriveBtn = document.getElementById('save-to-drive-btn');
             const loadFromDriveBtn = document.getElementById('load-from-drive-btn');
-            const signOutBtn = document.getElementById('sign-out-btn');
-            const saveToDriveItem = document.getElementById('save-to-drive-item');
-            const loadFromDriveItem = document.getElementById('load-from-drive-item');
-            const signOutItem = document.getElementById('sign-out-item');
+            const deleteFromDriveBtn = document.getElementById('delete-from-drive-btn');
             
             // --- MODAL HELPERS ---
             const genericModal = document.getElementById('generic-modal');
@@ -587,14 +606,17 @@
             const modalText = document.getElementById('generic-modal-text');
             const modalButtons = document.getElementById('generic-modal-buttons');
 
-            window.showModalAlert = (message, title = 'Notificación') => {
+            window.showModalAlert = (message, title = 'Notificación', onDismiss) => {
                 modalTitle.textContent = title;
                 modalText.textContent = message;
                 modalButtons.innerHTML = `<div class="hud-item"><div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div><button id="modal-ok-btn" class="hud-button">Aceptar</button></div>`;
                 genericModal.classList.add('active');
-                document.getElementById('modal-ok-btn').addEventListener('click', () => genericModal.classList.remove('active'), { once: true });
+                document.getElementById('modal-ok-btn').addEventListener('click', () => {
+                    genericModal.classList.remove('active');
+                    if (onDismiss) onDismiss();
+                }, { once: true });
             };
-            window.showModalConfirm = (message, onConfirm, title = 'Confirmación') => {
+            window.showModalConfirm = (message, onConfirm, title = 'Confirmación', onCancel) => {
                 modalTitle.textContent = title;
                 modalText.textContent = message;
                 modalButtons.innerHTML = `<div class="hud-item"><div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div><button id="modal-confirm-btn" class="hud-button">Confirmar</button></div><div class="hud-item"><div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div><button id="modal-cancel-btn" class="hud-button">Cancelar</button></div>`;
@@ -602,18 +624,10 @@
                 const confirmBtn = document.getElementById('modal-confirm-btn');
                 const cancelBtn = document.getElementById('modal-cancel-btn');
                 const confirmHandler = () => { genericModal.classList.remove('active'); if (onConfirm) onConfirm(); removeListeners(); };
-                const cancelHandler = () => { genericModal.classList.remove('active'); removeListeners(); };
+                const cancelHandler = () => { genericModal.classList.remove('active'); if (onCancel) onCancel(); removeListeners(); };
                 const removeListeners = () => { confirmBtn.removeEventListener('click', confirmHandler); cancelBtn.removeEventListener('click', cancelHandler); };
                 confirmBtn.addEventListener('click', confirmHandler);
                 cancelBtn.addEventListener('click', cancelHandler);
-            };
-
-            // --- UI STATE MANAGEMENT ---
-            window.updateGoogleDriveUI = () => {
-                googleSyncBtnItem.classList.toggle('hidden', isUserLoggedIn);
-                saveToDriveItem.classList.toggle('hidden', !isUserLoggedIn);
-                loadFromDriveItem.classList.toggle('hidden', !isUserLoggedIn);
-                signOutItem.classList.toggle('hidden', !isUserLoggedIn);
             };
 
             // --- ONBOARDING LOGIC ---
@@ -709,10 +723,35 @@
                 event.target.value = '';
             });
 
-            googleSyncBtn.addEventListener('click', handleAuthClick);
-            saveToDriveBtn.addEventListener('click', saveDataToDrive);
-            loadFromDriveBtn.addEventListener('click', loadDataFromDrive);
-            signOutBtn.addEventListener('click', handleSignoutClick);
+            // --- New Google Sync Flow ---
+            const googleSyncItem = document.getElementById('google-drive-sync-item');
+            const saveDriveItem = document.getElementById('save-to-drive-item');
+            const loadDriveItem = document.getElementById('load-from-drive-item');
+            const deleteDriveItem = document.getElementById('delete-from-drive-item');
+
+            googleSyncBtn.addEventListener('click', () => {
+                handleAuthClick(() => {
+                    // On successful login, show the action modal
+                    showModalConfirm(
+                        "Has conectado con Google Drive. ¿Qué deseas hacer?",
+                        null, // No action on confirm, buttons below do the work
+                        "Sincronización con Drive",
+                        () => signOut() // Sign out if user cancels
+                    );
+                    // Replace modal buttons with Drive actions
+                    const modalButtons = document.getElementById('generic-modal-buttons');
+                    modalButtons.innerHTML = `
+                        <div class="hud-item"><button id="modal-save-btn" class="hud-button">Guardar en Drive</button></div>
+                        <div class="hud-item"><button id="modal-load-btn" class="hud-button">Cargar desde Drive</button></div>
+                        <div class="hud-item"><button id="modal-delete-btn" class="hud-button">Eliminar de Drive</button></div>
+                        <div class="hud-item"><button id="modal-cancel-sync-btn" class="hud-button">Cancelar</button></div>
+                    `;
+                    document.getElementById('modal-save-btn').onclick = () => { genericModal.classList.remove('active'); saveDataToDrive(); };
+                    document.getElementById('modal-load-btn').onclick = () => { genericModal.classList.remove('active'); loadDataFromDrive(); };
+                    document.getElementById('modal-delete-btn').onclick = () => { genericModal.classList.remove('active'); deleteBackupFromDrive(); };
+                    document.getElementById('modal-cancel-sync-btn').onclick = () => { genericModal.classList.remove('active'); signOut(); };
+                });
+            });
             
             function initializeApp() {
                 const unifiedData = getUnifiedData();
@@ -725,7 +764,6 @@
                     mainAppContainer.style.display = 'none';
                     showStep(1);
                 }
-                updateGoogleDriveUI(); // Set initial state of Google Drive buttons
             }
 
             initializeApp();
