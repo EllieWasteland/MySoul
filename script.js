@@ -234,9 +234,11 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let i = 0; i < progressSteps.length; i++) {
             progressSteps[i].classList.toggle('active', i < step);
         }
-
-        buttons.formBack.style.visibility = step > 1 ? 'visible' : 'hidden';
+        
+        // MODIFICADO: Cambiado de 'visibility' a 'display' para un colapso correcto del layout
+        buttons.formBack.style.display = step > 1 ? 'inline-flex' : 'none';
         buttons.formSkip.style.display = step > 1 && step < 4 ? 'inline-flex' : 'none';
+        
         buttons.formNext.textContent = step === 4 ? (formState.isEditing ? 'Guardar Cambios' : 'Crear Tarea') : 'Siguiente';
     }
 
