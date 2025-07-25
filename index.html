@@ -14,6 +14,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Bitcount+Prop+Single:wght@400;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
     
+    <!-- Google API Scripts -->
+    <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+    <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
+
     <style>
         :root {
             --bg-color: #000000;
@@ -35,6 +39,90 @@
             background-image: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.12) 1px, transparent 0);
             background-size: 28px 28px;
         }
+
+        /* --- Onboarding & Modal Styles --- */
+        .onboarding-step {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 200;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2rem;
+            background-color: var(--bg-color);
+            opacity: 0;
+            transition: opacity 0.8s ease-in-out;
+        }
+        .onboarding-step.active {
+            display: flex;
+            opacity: 1;
+        }
+        .onboarding-title {
+            font-family: 'Bitcount Prop Single', sans-serif;
+            font-size: 3rem;
+            font-weight: 600;
+            letter-spacing: -0.03em;
+            line-height: 1;
+        }
+        .onboarding-text {
+            font-size: 1.125rem;
+            color: var(--text-secondary);
+            margin-top: 1rem;
+            max-width: 600px;
+        }
+        #fingerprint-button {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            border: 2px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        #fingerprint-button .icon {
+            width: 50px;
+            height: 50px;
+            color: var(--text-secondary);
+            transition: color 0.3s ease;
+        }
+        #fingerprint-fill {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background-color: var(--text-primary);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 2s ease-out, height 2s ease-out;
+        }
+        #fingerprint-button.holding #fingerprint-fill {
+            width: 100px;
+            height: 100px;
+        }
+        #fingerprint-button.holding .icon {
+            color: var(--bg-color);
+            z-index: 1;
+        }
+        #transition-overlay {
+            position: fixed;
+            inset: 0;
+            background: var(--text-primary);
+            z-index: 250;
+            transform: scale(0);
+            border-radius: 50%;
+            pointer-events: none;
+            transition: transform 0.8s cubic-bezier(0.7, 0, 0.3, 1);
+        }
+        #transition-overlay.expand {
+            transform: scale(2);
+        }
+        /* --- End Onboarding Styles --- */
 
         #lock-screen {
             position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column;
@@ -62,6 +150,7 @@
         
         @media (max-width: 640px) {
             .section-title { font-size: 3.5rem; }
+            .onboarding-title { font-size: 2.5rem; }
             #lock-screen-time { font-size: 5rem; }
             #lock-screen-date { font-size: 1rem; }
         }
@@ -85,9 +174,16 @@
             position: relative;
             border: 1px solid var(--border-color);
             padding: 0;
-            transition: border-color 0.3s, background-color 0.3s;
+            transition: border-color 0.3s, background-color 0.3s, opacity 0.3s, max-height 0.5s ease;
+            overflow: hidden;
         }
-        .hud-item > .hud-button {
+        .hud-item.hidden {
+            max-height: 0;
+            padding: 0;
+            border: none;
+            opacity: 0;
+        }
+        .hud-item > .hud-button, .hud-item > .input-field {
             width: 100%;
             height: 100%;
             padding: 0.75rem 1.5rem;
@@ -98,7 +194,12 @@
             cursor: pointer;
             transition: color 0.3s;
         }
-        .hud-item:hover {
+        .input-field {
+            background: transparent;
+            outline: none;
+            text-align: center;
+        }
+        .hud-item:hover, .hud-item:has(> .input-field:focus) {
             background-color: var(--highlight-color);
             border-color: var(--text-primary);
         }
@@ -111,7 +212,9 @@
             background-color: var(--border-color); 
             transition: background-color 0.3s; 
         }
-        .hud-item:hover .corner-decoration::before, .hud-item:hover .corner-decoration::after { 
+        .hud-item:hover .corner-decoration::before, .hud-item:hover .corner-decoration::after,
+        .hud-item:has(> .input-field:focus) .corner-decoration::before, 
+        .hud-item:has(> .input-field:focus) .corner-decoration::after { 
             background-color: var(--text-primary); 
         }
         .hud-item > .top-left { top: -1px; left: -1px; } 
@@ -121,131 +224,421 @@
     </style>
 </head>
 <body>
-
-    <div id="lock-screen">
-        <div class="text-center">
-            <h1 id="lock-screen-time">12:00</h1>
-            <p id="lock-screen-date">martes, 22 de julio</p>
-        </div>
-        <div id="slider-container">
-            <div id="slider-handle">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+    <!-- Onboarding Section -->
+    <div id="onboarding-container">
+        <!-- Step 1: Login Choice -->
+        <div id="onboarding-step-1" class="onboarding-step">
+            <h2 class="onboarding-title">MySoul</h2>
+            <p class="onboarding-text">Elige cómo quieres continuar. Tus datos se pueden sincronizar más tarde.</p>
+            <div class="mt-8 space-y-4 max-w-sm mx-auto w-full">
+                <div class="hud-item">
+                    <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
+                    <button id="google-login-btn" class="hud-button">Iniciar con Google</button>
+                </div>
+                <div class="hud-item">
+                    <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
+                    <button id="local-continue-btn" class="hud-button">Continuar en modo local</button>
+                </div>
             </div>
-            <div id="slider-text">Deslizar</div>
+        </div>
+
+        <!-- Step 2: Enter Name -->
+        <div id="onboarding-step-2" class="onboarding-step">
+            <h2 class="onboarding-title">¿Cómo te llamas?</h2>
+            <p class="onboarding-text">Este nombre se usará para personalizar tu experiencia.</p>
+            <div class="mt-8 max-w-sm mx-auto w-full">
+                <div class="hud-item">
+                    <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
+                    <input type="text" id="username-input" class="input-field text-2xl" placeholder="Tu nombre...">
+                </div>
+                <div class="hud-item mt-4">
+                     <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
+                    <button id="confirm-name-btn" class="hud-button">Confirmar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Commitment Letter -->
+        <div id="onboarding-step-3" class="onboarding-step">
+            <div class="flex flex-col items-center justify-between h-full w-full">
+                <div class="flex-grow flex flex-col items-center justify-center">
+                    <h2 class="onboarding-title">Carta de Compromiso</h2>
+                    <p class="onboarding-text">
+                        Hoy, sellamos un pacto. Yo, <strong>MySoul</strong>, me comprometo a ser tu compañero constante, a facilitar la gestión de tu vida y a ayudarte a mejorar tu estilo de vida. Tú, <strong id="commitment-username">Usuario</strong>, te comprometes a interactuar conmigo, a confiar en este sistema y a trabajar juntos por tus metas.
+                    </p>
+                </div>
+                <div id="fingerprint-button">
+                    <div id="fingerprint-fill"></div>
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M7.864 4.243A7.5 7.5 0 0119.5 12c0 2.42-.943 4.638-2.5 6.312M15.75 9.75A3.75 3.75 0 0112 13.5m-3.75 0A3.75 3.75 0 0112 6.75m-3.75 0a3.75 3.75 0 00-3.75 3.75M9 13.5A3.75 3.75 0 0112 9.75M15 13.5A3.75 3.75 0 0112 17.25m-3.75 0h3.75" />
+                    </svg>
+                </div>
+            </div>
         </div>
     </div>
+    <div id="transition-overlay"></div>
 
-    <div id="snap-container" class="snap-container">
-        
-        <section id="welcome-view" class="snap-section">
-             <div class="section-content">
-                <h2 class="section-title">MySoul</h2>
-                <p class="section-description">Bienvenido a tu sistema operativo personal. Desliza para explorar tus módulos.</p>
+
+    <!-- Main App (initially hidden) -->
+    <div id="main-app-container" style="display: none;">
+        <div id="lock-screen">
+            <div class="text-center">
+                <h1 id="lock-screen-time">12:00</h1>
+                <p id="lock-screen-date">martes, 22 de julio</p>
             </div>
-        </section>
-
-        <section id="mytime-view" class="snap-section" data-href="mytime.html">
-            <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
-            <div class="section-container">
-                <div class="section-content">
-                    <h2 class="section-title">MyTime</h2>
-                    <p class="section-description">Gestión de tareas y enfoque para maximizar tu productividad.</p>
-                    <div class="online-indicator"><div class="light"></div>[ En linea ]</div>
+            <div id="slider-container">
+                <div id="slider-handle">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
                 </div>
-                <div class="topo-svg-container">
-                    <svg class="topo-svg-background" viewBox="0 0 200 100" preserveAspectRatio="xMidYMax meet">
-                        <path style="animation-delay: -5s;" d="M -20,80 C 40,20 80,120 140,70 S 180,10 220,60" />
-                        <path style="animation-delay: -2s;" d="M -20,90 C 30,40 70,140 130,80 S 190,30 220,70" />
-                        <path style="animation-delay: 0s;" d="M -20,100 C 50,60 90,160 150,90 S 200,50 220,80" />
-                        <path style="animation-delay: -6s;" d="M -20,110 C 20,70 60,180 120,100 S 210,70 220,90" />
-                    </svg>
-                </div>
+                <div id="slider-text">Deslizar</div>
             </div>
-        </section>
+        </div>
 
-        <section id="mymemory-view" class="snap-section" data-href="mymemory.html">
-            <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
-            <div class="section-container">
-                <div class="section-content">
-                    <h2 class="section-title">MyMemory</h2>
-                    <p class="section-description">Tu memoria extendida para organizar aficiones, ideas y listas.</p>
-                    <div class="online-indicator"><div class="light"></div>[ En linea ]</div>
+        <div id="snap-container" class="snap-container">
+            
+            <section id="welcome-view" class="snap-section">
+                 <div class="section-content">
+                    <h2 class="section-title">MySoul</h2>
+                    <p class="section-description">Bienvenido a tu sistema operativo personal. Desliza para explorar tus módulos.</p>
                 </div>
-                <div class="topo-svg-container">
-                    <svg class="topo-svg-background" viewBox="0 0 200 100" preserveAspectRatio="xMidYMax meet">
-                        <path style="animation-delay: -7s;" d="M -20,100 C 20,80 40,120 60,100 C 80,80 100,120 120,100 C 140,80 160,120 180,100 C 200,80 220,120 240,100" />
-                        <path style="animation-delay: -3s;" d="M -20,90 C 20,70 40,110 60,90 C 80,70 100,110 120,90 C 140,70 160,110 180,90 C 200,70 220,110 240,90" />
-                        <path style="animation-delay: 0s;" d="M -20,80 C 20,60 40,100 60,80 C 80,60 100,100 120,80 C 140,60 160,100 180,80 C 200,60 220,100 240,80" />
-                        <path style="animation-delay: -1s;" d="M -20,70 C 20,50 40,90 60,70 C 80,50 100,90 120,70 C 140,50 160,90 180,70 C 200,50 220,90 240,70" />
-                    </svg>
-                </div>
-            </div>
-        </section>
+            </section>
 
-        <section id="settings-view" class="snap-section">
-            <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
-            <div class="section-container">
-                <div class="section-content">
-                    <h2 class="section-title">Ajustes</h2>
-                    <p class="section-description">Gestiona los datos de tu sistema operativo personal.</p>
-                    <!-- BOTONES CORREGIDOS -->
-                    <div class="mt-8 space-y-4 max-w-sm mx-auto">
-                        <div class="hud-item">
-                            <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
-                            <button id="export-data-btn" class="hud-button">Exportar Datos Unificados</button>
-                        </div>
-                        <input type="file" id="import-file-input" class="hidden" accept=".json">
-                        <div class="hud-item">
-                            <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
-                            <button id="import-data-btn" class="hud-button">Importar Datos</button>
-                        </div>
+            <section id="mytime-view" class="snap-section" data-href="mytime.html">
+                <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
+                <div class="section-container">
+                    <div class="section-content">
+                        <h2 class="section-title">MyTime</h2>
+                        <p class="section-description">Gestión de tareas y enfoque para maximizar tu productividad.</p>
+                        <div class="online-indicator"><div class="light"></div>[ En linea ]</div>
+                    </div>
+                    <div class="topo-svg-container">
+                        <svg class="topo-svg-background" viewBox="0 0 200 100" preserveAspectRatio="xMidYMax meet">
+                            <path style="animation-delay: -5s;" d="M -20,80 C 40,20 80,120 140,70 S 180,10 220,60" />
+                            <path style="animation-delay: -2s;" d="M -20,90 C 30,40 70,140 130,80 S 190,30 220,70" />
+                            <path style="animation-delay: 0s;" d="M -20,100 C 50,60 90,160 150,90 S 200,50 220,80" />
+                            <path style="animation-delay: -6s;" d="M -20,110 C 20,70 60,180 120,100 S 210,70 220,90" />
+                        </svg>
                     </div>
                 </div>
-                <div class="topo-svg-container">
-                    <svg class="topo-svg-background" viewBox="0 0 200 100" preserveAspectRatio="xMidYMax meet">
-                        <path style="animation-delay: 0s;" d="M 10,100 L 100,20 L 190,100" />
-                        <path style="animation-delay: -2s;" d="M 25,100 L 100,35 L 175,100" />
-                        <path style="animation-delay: -8s;" d="M 40,100 L 100,50 L 160,100" />
-                        <path style="animation-delay: -6s;" d="M 55,100 L 100,65 L 145,100" />
-                        <path style="animation-delay: -4s;" d="M 70,100 L 100,80 L 130,100" />
-                    </svg>
-                </div>
-            </div>
-        </section>
+            </section>
 
+            <section id="mymemory-view" class="snap-section" data-href="mymemory.html">
+                <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
+                <div class="section-container">
+                    <div class="section-content">
+                        <h2 class="section-title">MyMemory</h2>
+                        <p class="section-description">Tu memoria extendida para organizar aficiones, ideas y listas.</p>
+                        <div class="online-indicator"><div class="light"></div>[ En linea ]</div>
+                    </div>
+                    <div class="topo-svg-container">
+                        <svg class="topo-svg-background" viewBox="0 0 200 100" preserveAspectRatio="xMidYMax meet">
+                            <path style="animation-delay: -7s;" d="M -20,100 C 20,80 40,120 60,100 C 80,80 100,120 120,100 C 140,80 160,120 180,100 C 200,80 220,120 240,100" />
+                            <path style="animation-delay: -3s;" d="M -20,90 C 20,70 40,110 60,90 C 80,70 100,110 120,90 C 140,70 160,110 180,90 C 200,70 220,110 240,90" />
+                            <path style="animation-delay: 0s;" d="M -20,80 C 20,60 40,100 60,80 C 80,60 100,100 120,80 C 140,60 160,100 180,80 C 200,60 220,100 240,80" />
+                            <path style="animation-delay: -1s;" d="M -20,70 C 20,50 40,90 60,70 C 80,50 100,90 120,70 C 140,50 160,90 180,70 C 200,50 220,90 240,70" />
+                        </svg>
+                    </div>
+                </div>
+            </section>
+
+            <section id="settings-view" class="snap-section">
+                <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
+                <div class="section-container">
+                    <div class="section-content">
+                        <h2 class="section-title">Ajustes</h2>
+                        <p class="section-description">Gestiona los datos de tu sistema operativo personal.</p>
+                        <div class="mt-8 space-y-4 max-w-sm mx-auto">
+                            <!-- Google Drive Buttons -->
+                            <div id="google-drive-buttons-container" class="space-y-4">
+                                <div id="save-to-drive-item" class="hud-item hidden">
+                                    <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
+                                    <button id="save-to-drive-btn" class="hud-button">Guardar en Drive</button>
+                                </div>
+                                <div id="sign-out-item" class="hud-item hidden">
+                                    <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
+                                    <button id="sign-out-btn" class="hud-button">Cerrar Sesión de Google</button>
+                                </div>
+                            </div>
+                            <!-- Local Data Buttons -->
+                            <div class="hud-item">
+                                <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
+                                <button id="export-data-btn" class="hud-button">Exportar Datos Locales</button>
+                            </div>
+                            <input type="file" id="import-file-input" class="hidden" accept=".json">
+                            <div class="hud-item">
+                                <div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div>
+                                <button id="import-data-btn" class="hud-button">Importar Datos Locales</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="topo-svg-container">
+                        <svg class="topo-svg-background" viewBox="0 0 200 100" preserveAspectRatio="xMidYMax meet">
+                            <path style="animation-delay: 0s;" d="M 10,100 L 100,20 L 190,100" />
+                            <path style="animation-delay: -2s;" d="M 25,100 L 100,35 L 175,100" />
+                            <path style="animation-delay: -8s;" d="M 40,100 L 100,50 L 160,100" />
+                            <path style="animation-delay: -6s;" d="M 55,100 L 100,65 L 145,100" />
+                            <path style="animation-delay: -4s;" d="M 70,100 L 100,80 L 130,100" />
+                        </svg>
+                    </div>
+                </div>
+            </section>
+        </div>
     </div>
 
-    <!-- Incluir el gestor de datos -->
-    <script src="data-manager.js"></script>
-    
+    <!-- Generic Modal for Alerts and Confirmations -->
+    <div id="generic-modal" class="onboarding-step" style="z-index: 300; background-color: rgba(0,0,0,0.7); backdrop-filter: blur(5px);">
+        <div class="section-content" style="background-color: var(--bg-color); border: 1px solid var(--border-color); padding: 2rem; animation: none; opacity: 1; transform: none;">
+            <h2 id="generic-modal-title" class="onboarding-title text-2xl">Notificación</h2>
+            <p id="generic-modal-text" class="onboarding-text my-6">Message goes here.</p>
+            <div id="generic-modal-buttons" class="mt-8 space-y-4 max-w-sm mx-auto w-full">
+                <!-- Buttons will be injected here by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Application Logic Script -->
     <script>
+        // --- CONFIGURATION (replaces config.js) ---
+        // ¡IMPORTANTE! Pega aquí tu ID de Cliente de OAuth 2.0.
+        const GOOGLE_CLIENT_ID = 'TU_ID_DE_CLIENTE_VA_AQUÍ';
+
+        // --- DATA MANAGER (replaces data-manager.js) ---
+        const UNIFIED_STORAGE_KEY = 'mySoul-data-v1';
+        function getDefaultUnifiedState() {
+            return {
+                myTime: { userName: null, tasks: [], schedule: [], currentView: 'dashboard', selectedTaskId: null, selectedSubjectId: null, tempSubtasks: [], calendarDate: new Date().toISOString(), wallpaper: null, filters: { priority: 'all', tag: 'all' }, zenSettings: { pomodoro: 25, shortBreak: 5, longBreak: 15, color: '#00F0FF' }, gamification: { streak: 0, lastCompletionDate: null, achievements: [], pomodoroCount: 0 }, currentZenTaskId: null },
+                myMemory: { memories: [], settings: { theme: 'dark' } },
+                globalSettings: { onboardingComplete: false }
+            };
+        }
+        function getUnifiedData() {
+            const data = localStorage.getItem(UNIFIED_STORAGE_KEY);
+            if (data) {
+                const parsedData = JSON.parse(data);
+                const defaultState = getDefaultUnifiedState();
+                return { ...defaultState, ...parsedData, myTime: { ...defaultState.myTime, ...(parsedData.myTime || {}) }, myMemory: { ...defaultState.myMemory, ...(parsedData.myMemory || {}) }, globalSettings: { ...defaultState.globalSettings, ...(parsedData.globalSettings || {}) }, };
+            }
+            return getDefaultUnifiedState();
+        }
+        function saveUnifiedData(data) {
+            try {
+                localStorage.setItem(UNIFIED_STORAGE_KEY, JSON.stringify(data));
+            } catch (error) {
+                console.error("Error al guardar los datos unificados:", error);
+            }
+        }
+        
+        // --- GOOGLE DRIVE LOGIC (replaces google-drive.js) ---
+        const SCOPES = 'https://www.googleapis.com/auth/drive.appdata';
+        const BACKUP_FILENAME = 'mysoul_backup.json';
+        let tokenClient;
+        let isUserLoggedIn = false;
+
+        function gapiLoaded() { gapi.load('client', initializeGapiClient); }
+        async function initializeGapiClient() {
+            try {
+                await gapi.client.init({ discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'], });
+                console.log('Cliente GAPI inicializado.');
+            } catch (error) { console.error('Error inicializando el cliente GAPI:', error); }
+        }
+        function gisLoaded() {
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: GOOGLE_CLIENT_ID,
+                scope: SCOPES,
+                callback: '',
+            });
+            console.log('Cliente de identidad de Google inicializado.');
+        }
+        function handleAuthClick() {
+            tokenClient.callback = async (resp) => {
+                if (resp.error !== undefined) {
+                    console.error('Error de autenticación:', resp);
+                    showModalAlert('Hubo un error durante el inicio de sesión.', 'Error');
+                    throw (resp);
+                }
+                isUserLoggedIn = true;
+                console.log('¡Inicio de sesión exitoso!');
+                updateUiForLoggedInState();
+                await loadDataFromDrive(true); // true para indicar que es el primer login
+            };
+            if (gapi.client.getToken() === null) {
+                tokenClient.requestAccessToken({ prompt: 'consent' });
+            } else {
+                tokenClient.requestAccessToken({ prompt: '' });
+            }
+        }
+        function handleSignoutClick() {
+            const token = gapi.client.getToken();
+            if (token !== null) {
+                google.accounts.oauth2.revoke(token.access_token, () => {
+                    gapi.client.setToken('');
+                    isUserLoggedIn = false;
+                    console.log('Sesión cerrada.');
+                    updateUiForLoggedOutState();
+                });
+            }
+        }
+        async function findBackupFile() {
+            try {
+                const response = await gapi.client.drive.files.list({ spaces: 'appDataFolder', fields: 'files(id, name)', pageSize: 10 });
+                return response.result.files.find(file => file.name === BACKUP_FILENAME)?.id || null;
+            } catch (error) { console.error("Error buscando el archivo de backup:", error); return null; }
+        }
+        async function saveDataToDrive() {
+            if (!isUserLoggedIn) { showModalAlert("Debes iniciar sesión con Google para guardar en la nube.", "No has iniciado sesión"); return; }
+            const fileContent = JSON.stringify(getUnifiedData());
+            const fileId = await findBackupFile();
+            const boundary = '-------314159265358979323846';
+            const delimiter = `\r\n--${boundary}\r\n`;
+            const close_delim = `\r\n--${boundary}--`;
+            const metadata = { 'name': BACKUP_FILENAME, 'mimeType': 'application/json' };
+            const requestBody = delimiter + 'Content-Type: application/json\r\n\r\n' + JSON.stringify(metadata) + delimiter + 'Content-Type: application/json\r\n\r\n' + fileContent + close_delim;
+            const path = `/upload/drive/v3/files${fileId ? `/${fileId}` : ''}`;
+            const method = fileId ? 'PATCH' : 'POST';
+            try {
+                await gapi.client.request({ 'path': path, 'method': method, 'params': { 'uploadType': 'multipart' }, 'headers': { 'Content-Type': `multipart/related; boundary="${boundary}"` }, 'body': requestBody });
+                console.log("Datos guardados con éxito en Drive.");
+                showModalAlert("Copia de seguridad guardada en Google Drive.");
+            } catch (error) { console.error("Error al guardar en Drive:", error); showModalAlert("Error al guardar la copia de seguridad.", "Error"); }
+        }
+        async function loadDataFromDrive(isFirstLogin = false) {
+            if (!isUserLoggedIn) return;
+            const fileId = await findBackupFile();
+            if (!fileId) {
+                console.log("No se encontró archivo de backup en Drive.");
+                if (isFirstLogin) {
+                    await saveDataToDrive(); // Guarda la data local actual en la nube la primera vez.
+                    finishOnboarding(); // Continúa al hub
+                }
+                return;
+            }
+            try {
+                const response = await gapi.client.drive.files.get({ fileId: fileId, alt: 'media' });
+                const cloudData = response.result;
+                const onConfirm = () => {
+                    saveUnifiedData(cloudData);
+                    showModalAlert("Datos restaurados. La aplicación se recargará.", "Éxito");
+                    setTimeout(() => window.location.reload(), 2000);
+                };
+                if (isFirstLogin) { // Si es el primer login, restaura sin preguntar
+                     onConfirm();
+                } else {
+                    showModalConfirm("Se encontró una copia de seguridad en la nube. ¿Deseas restaurarla? Se sobreescribirán tus datos locales.", onConfirm, "Restaurar Copia");
+                }
+            } catch (error) { console.error("Error cargando datos desde Drive:", error); showModalAlert("No se pudo cargar la copia de seguridad desde la nube.", "Error"); }
+        }
+
+        // --- MAIN APPLICATION LOGIC ---
         document.addEventListener('DOMContentLoaded', () => {
+            // --- UI ELEMENTS ---
+            const onboardingContainer = document.getElementById('onboarding-container');
+            const mainAppContainer = document.getElementById('main-app-container');
+            const steps = { 1: document.getElementById('onboarding-step-1'), 2: document.getElementById('onboarding-step-2'), 3: document.getElementById('onboarding-step-3'), };
+            const localContinueBtn = document.getElementById('local-continue-btn');
+            const googleLoginBtn = document.getElementById('google-login-btn');
+            const usernameInput = document.getElementById('username-input');
+            const confirmNameBtn = document.getElementById('confirm-name-btn');
+            const commitmentUsername = document.getElementById('commitment-username');
+            const fingerprintButton = document.getElementById('fingerprint-button');
+            const transitionOverlay = document.getElementById('transition-overlay');
             const lockScreen = document.getElementById('lock-screen');
             const timeDisplay = document.getElementById('lock-screen-time');
             const dateDisplay = document.getElementById('lock-screen-date');
             const sliderHandle = document.getElementById('slider-handle');
-            const sliderContainer = document.getElementById('slider-container');
             const sections = document.querySelectorAll('.snap-section');
-            
             const exportBtn = document.getElementById('export-data-btn');
             const importBtn = document.getElementById('import-data-btn');
             const importFileInput = document.getElementById('import-file-input');
+            const saveToDriveBtn = document.getElementById('save-to-drive-btn');
+            const signOutBtn = document.getElementById('sign-out-btn');
+            const saveToDriveItem = document.getElementById('save-to-drive-item');
+            const signOutItem = document.getElementById('sign-out-item');
+            
+            // --- MODAL HELPERS ---
+            const genericModal = document.getElementById('generic-modal');
+            const modalTitle = document.getElementById('generic-modal-title');
+            const modalText = document.getElementById('generic-modal-text');
+            const modalButtons = document.getElementById('generic-modal-buttons');
 
+            window.showModalAlert = (message, title = 'Notificación') => {
+                modalTitle.textContent = title;
+                modalText.textContent = message;
+                modalButtons.innerHTML = `<div class="hud-item"><div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div><button id="modal-ok-btn" class="hud-button">Aceptar</button></div>`;
+                genericModal.classList.add('active');
+                document.getElementById('modal-ok-btn').addEventListener('click', () => genericModal.classList.remove('active'), { once: true });
+            };
+            window.showModalConfirm = (message, onConfirm, title = 'Confirmación') => {
+                modalTitle.textContent = title;
+                modalText.textContent = message;
+                modalButtons.innerHTML = `<div class="hud-item"><div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div><button id="modal-confirm-btn" class="hud-button">Confirmar</button></div><div class="hud-item"><div class="corner-decoration top-left"></div><div class="corner-decoration top-right"></div><div class="corner-decoration bottom-left"></div><div class="corner-decoration bottom-right"></div><button id="modal-cancel-btn" class="hud-button">Cancelar</button></div>`;
+                genericModal.classList.add('active');
+                const confirmBtn = document.getElementById('modal-confirm-btn');
+                const cancelBtn = document.getElementById('modal-cancel-btn');
+                const confirmHandler = () => { genericModal.classList.remove('active'); if (onConfirm) onConfirm(); removeListeners(); };
+                const cancelHandler = () => { genericModal.classList.remove('active'); removeListeners(); };
+                const removeListeners = () => { confirmBtn.removeEventListener('click', confirmHandler); cancelBtn.removeEventListener('click', cancelHandler); };
+                confirmBtn.addEventListener('click', confirmHandler);
+                cancelBtn.addEventListener('click', cancelHandler);
+            };
+
+            // --- UI STATE MANAGEMENT ---
+            window.updateUiForLoggedInState = () => {
+                saveToDriveItem.classList.remove('hidden');
+                signOutItem.classList.remove('hidden');
+            };
+            window.updateUiForLoggedOutState = () => {
+                saveToDriveItem.classList.add('hidden');
+                signOutItem.classList.add('hidden');
+                showModalAlert("Has cerrado tu sesión de Google.", "Sesión Cerrada");
+            };
+
+            // --- ONBOARDING LOGIC ---
+            function showStep(stepNumber) { Object.values(steps).forEach(step => step.classList.remove('active')); if (steps[stepNumber]) steps[stepNumber].classList.add('active'); }
+            window.finishOnboarding = () => {
+                transitionOverlay.classList.add('expand');
+                setTimeout(() => {
+                    onboardingContainer.style.display = 'none';
+                    mainAppContainer.style.display = 'block';
+                    const unifiedData = getUnifiedData();
+                    unifiedData.globalSettings.onboardingComplete = true;
+                    saveUnifiedData(unifiedData);
+                }, 400); 
+                setTimeout(() => { transitionOverlay.style.display = 'none'; }, 1200);
+            };
+
+            localContinueBtn.addEventListener('click', () => showStep(2));
+            googleLoginBtn.addEventListener('click', handleAuthClick);
+            confirmNameBtn.addEventListener('click', () => {
+                const username = usernameInput.value.trim();
+                if (username) {
+                    const unifiedData = getUnifiedData();
+                    if (!unifiedData.myTime) unifiedData.myTime = {};
+                    unifiedData.myTime.userName = username;
+                    saveUnifiedData(unifiedData);
+                    commitmentUsername.textContent = username;
+                    showStep(3);
+                } else { showModalAlert('Por favor, introduce un nombre.'); }
+            });
+            let holdTimeout;
+            fingerprintButton.addEventListener('mousedown', startHold);
+            fingerprintButton.addEventListener('mouseup', endHold);
+            fingerprintButton.addEventListener('mouseleave', endHold);
+            fingerprintButton.addEventListener('touchstart', startHold, { passive: true });
+            fingerprintButton.addEventListener('touchend', endHold);
+            function startHold(e) { e.preventDefault(); fingerprintButton.classList.add('holding'); holdTimeout = setTimeout(finishOnboarding, 2000); }
+            function endHold() { fingerprintButton.classList.remove('holding'); clearTimeout(holdTimeout); }
+
+            // --- MAIN APP LOGIC ---
             function updateClock() {
                 const now = new Date();
-                const timeString = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false });
-                const dateString = now.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
-                timeDisplay.textContent = timeString;
-                dateDisplay.textContent = dateString.charAt(0).toUpperCase() + dateString.slice(1);
+                timeDisplay.textContent = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', hour12: false });
+                dateDisplay.textContent = now.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
             }
-
-            let isDragging = false;
-            let startX = 0;
+            let isDragging = false, startX = 0;
             function startDrag(e) { isDragging = true; startX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX; sliderHandle.style.cursor = 'grabbing'; sliderHandle.style.transition = 'none'; }
-            function onDrag(e) { if (!isDragging) return; e.preventDefault(); const currentX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX; let moveX = currentX - startX; const maxMove = sliderContainer.offsetWidth - sliderHandle.offsetWidth; moveX = Math.max(0, Math.min(moveX, maxMove)); sliderHandle.style.transform = `translateX(${moveX}px)`; if (moveX >= maxMove - 5) { unlock(); } }
+            function onDrag(e) { if (!isDragging) return; e.preventDefault(); const currentX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX; let moveX = currentX - startX; const maxMove = sliderContainer.offsetWidth - sliderHandle.offsetWidth; moveX = Math.max(0, Math.min(moveX, maxMove)); sliderHandle.style.transform = `translateX(${moveX}px)`; if (moveX >= maxMove - 5) unlock(); }
             function endDrag() { if (!isDragging) return; isDragging = false; sliderHandle.style.cursor = 'grab'; sliderHandle.style.transition = 'transform 0.3s ease'; sliderHandle.style.transform = 'translateX(0px)'; }
-            function unlock() { if (!lockScreen.classList.contains('unlocked')) { lockScreen.classList.add('unlocked'); isDragging = false; } }
-
+            function unlock() { if (!lockScreen.classList.contains('unlocked')) lockScreen.classList.add('unlocked'); isDragging = false; }
             sliderHandle.addEventListener('mousedown', startDrag);
             document.addEventListener('mousemove', onDrag);
             document.addEventListener('mouseup', endDrag);
@@ -254,37 +647,23 @@
             document.addEventListener('touchend', endDrag);
 
             const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    entry.target.classList.toggle('visible', entry.isIntersecting);
-                });
+                entries.forEach(entry => entry.target.classList.toggle('visible', entry.isIntersecting));
             }, { threshold: 0.4 });
-
             sections.forEach(section => {
                 observer.observe(section);
-                if (section.dataset.href) {
-                     section.addEventListener('click', () => {
-                        const href = section.dataset.href;
-                        section.classList.add('exiting');
-                        setTimeout(() => { window.location.href = href; }, 400);
-                    });
-                }
+                if (section.dataset.href) section.addEventListener('click', () => { section.classList.add('exiting'); setTimeout(() => { window.location.href = section.dataset.href; }, 400); });
             });
             
             exportBtn.addEventListener('click', () => {
-                const data = getUnifiedData();
-                const dataStr = JSON.stringify(data, null, 2);
+                const dataStr = JSON.stringify(getUnifiedData(), null, 2);
                 const blob = new Blob([dataStr], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
-                a.href = url;
-                a.download = 'mysoul_backup.json';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
+                a.href = url; a.download = 'mysoul_backup.json';
+                document.body.appendChild(a); a.click(); document.body.removeChild(a);
                 URL.revokeObjectURL(url);
-                alert('Datos exportados con éxito.');
+                showModalAlert('Datos locales exportados con éxito.');
             });
-
             importBtn.addEventListener('click', () => importFileInput.click());
             importFileInput.addEventListener('change', (event) => {
                 const file = event.target.files[0];
@@ -293,54 +672,36 @@
                 reader.onload = (e) => {
                     try {
                         const importedData = JSON.parse(e.target.result);
-                        if (confirm('¿Estás seguro de que quieres sobreescribir todos tus datos actuales? Esta acción no se puede deshacer.')) {
+                        showModalConfirm('¿Estás seguro de que quieres sobreescribir tus datos locales? Esta acción no se puede deshacer.', () => {
                             saveUnifiedData(importedData);
-                            alert('Datos importados con éxito. La página se recargará.');
-                            window.location.reload();
-                        }
-                    } catch (error) {
-                        alert('Error al importar el archivo. Asegúrate de que es un archivo de guardado válido.');
-                        console.error("Error al parsear el archivo JSON importado:", error);
-                    }
+                            showModalAlert('Datos importados con éxito. La página se recargará.', 'Importación completa');
+                            setTimeout(() => window.location.reload(), 2000);
+                        });
+                    } catch (error) { showModalAlert('Error al importar el archivo.', 'Error de importación'); }
                 };
                 reader.readAsText(file);
                 event.target.value = '';
             });
 
-            updateClock();
-            setInterval(updateClock, 1000);
+            saveToDriveBtn.addEventListener('click', saveDataToDrive);
+            signOutBtn.addEventListener('click', handleSignoutClick);
+            
+            function initializeApp() {
+                const unifiedData = getUnifiedData();
+                if (unifiedData.globalSettings.onboardingComplete) {
+                    onboardingContainer.style.display = 'none';
+                    mainAppContainer.style.display = 'block';
+                } else {
+                    onboardingContainer.style.display = 'block';
+                    mainAppContainer.style.display = 'none';
+                    showStep(1);
+                }
+                updateClock();
+                setInterval(updateClock, 1000);
+            }
+
+            initializeApp();
         });
-    </script>
-    
-    <script>
-        if ('serviceWorker' in navigator) {
-            const swContent = `
-                const CACHE_NAME = 'mysoul-cache-v1.5';
-                const urlsToCache = [
-                  './', 'index.html', 'mytime.html', 'mymemory.html',
-                  'style.css', 'script.js', 'data-manager.js', 'manifest.json',
-                  'icons/icon-192x192.png', 'icons/icon-512x512.png',
-                  'https://cdn.tailwindcss.com',
-                  'https://fonts.googleapis.com/css2?family=Bitcount+Prop+Single:wght@400;600&family=Inter:wght@300;400&display=swap',
-                  'https://fonts.googleapis.com/css2?family=Kdam+Thmor+Pro&family=Inter:wght@400;500;600;700&display=swap',
-                  'https://raw.githubusercontent.com/lucasromerodb/liquid-glass-effect-macos/refs/heads/main/assets/flowers.jpg',
-                  'https://www.soundjay.com/nature/rain-light-2.mp3',
-                  'https://www.soundjay.com/nature/forest-reverb-1.mp3',
-                  'https://www.soundjay.com/nature/white-noise-1.mp3'
-                ];
-                self.addEventListener('install', e => e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(urlsToCache).catch(err => console.error('Failed to cache', err)))));
-                self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r => r || fetch(e.request))));
-                self.addEventListener('activate', e => {
-                  const cacheWhitelist = [CACHE_NAME];
-                  e.waitUntil(caches.keys().then(names => Promise.all(names.map(name => {
-                    if (cacheWhitelist.indexOf(name) === -1) return caches.delete(name);
-                  }))));
-                });
-            `;
-            const swBlob = new Blob([swContent], { type: 'application/javascript' });
-            const swUrl = URL.createObjectURL(swBlob);
-            navigator.serviceWorker.register(swUrl).then(reg => console.log('SW registered!', reg)).catch(err => console.log('SW registration failed: ', err));
-        }
     </script>
 </body>
 </html>
