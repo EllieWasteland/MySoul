@@ -530,19 +530,42 @@
             } catch (error) { console.error("Error cargando datos desde Drive:", error); showModalAlert("No se pudo cargar la copia de seguridad desde la nube.", "Error"); }
         }
 
+        // --- GLOBAL HELPER FUNCTIONS ---
+        // **FIX:** Moved these functions to the global scope
+        function showStep(stepNumber) {
+            const steps = { 1: document.getElementById('onboarding-step-1'), 2: document.getElementById('onboarding-step-2'), 3: document.getElementById('onboarding-step-3'), };
+            Object.values(steps).forEach(step => step.classList.remove('active')); 
+            if (steps[stepNumber]) steps[stepNumber].classList.add('active'); 
+        }
+
+        function finishOnboarding() {
+            const transitionOverlay = document.getElementById('transition-overlay');
+            const onboardingContainer = document.getElementById('onboarding-container');
+            const mainAppContainer = document.getElementById('main-app-container');
+            
+            transitionOverlay.classList.add('expand');
+            setTimeout(() => {
+                onboardingContainer.style.display = 'none';
+                mainAppContainer.style.display = 'block';
+                const unifiedData = getUnifiedData();
+                unifiedData.globalSettings.onboardingComplete = true;
+                saveUnifiedData(unifiedData);
+                initializeLockScreen(); 
+            }, 400); 
+            setTimeout(() => { transitionOverlay.style.display = 'none'; }, 1200);
+        };
+
         // --- MAIN APPLICATION LOGIC ---
         document.addEventListener('DOMContentLoaded', () => {
             // --- UI ELEMENTS ---
             const onboardingContainer = document.getElementById('onboarding-container');
             const mainAppContainer = document.getElementById('main-app-container');
-            const steps = { 1: document.getElementById('onboarding-step-1'), 2: document.getElementById('onboarding-step-2'), 3: document.getElementById('onboarding-step-3'), };
             const localContinueBtn = document.getElementById('local-continue-btn');
             const googleLoginBtn = document.getElementById('google-login-btn');
             const usernameInput = document.getElementById('username-input');
             const confirmNameBtn = document.getElementById('confirm-name-btn');
             const commitmentUsername = document.getElementById('commitment-username');
             const fingerprintButton = document.getElementById('fingerprint-button');
-            const transitionOverlay = document.getElementById('transition-overlay');
             const sections = document.querySelectorAll('.snap-section');
             const exportBtn = document.getElementById('export-data-btn');
             const importBtn = document.getElementById('import-data-btn');
@@ -591,21 +614,6 @@
             };
 
             // --- ONBOARDING LOGIC ---
-            function showStep(stepNumber) { Object.values(steps).forEach(step => step.classList.remove('active')); if (steps[stepNumber]) steps[stepNumber].classList.add('active'); }
-            
-            function finishOnboarding() {
-                transitionOverlay.classList.add('expand');
-                setTimeout(() => {
-                    onboardingContainer.style.display = 'none';
-                    mainAppContainer.style.display = 'block';
-                    const unifiedData = getUnifiedData();
-                    unifiedData.globalSettings.onboardingComplete = true;
-                    saveUnifiedData(unifiedData);
-                    initializeLockScreen(); 
-                }, 400); 
-                setTimeout(() => { transitionOverlay.style.display = 'none'; }, 1200);
-            };
-
             localContinueBtn.addEventListener('click', () => showStep(2));
             googleLoginBtn.addEventListener('click', handleAuthClick);
             confirmNameBtn.addEventListener('click', () => {
@@ -638,7 +646,7 @@
             function endHold() { fingerprintButton.classList.remove('holding'); clearTimeout(holdTimeout); }
 
             // --- MAIN APP LOGIC ---
-            function initializeLockScreen() {
+            window.initializeLockScreen = () => {
                 const lockScreen = document.getElementById('lock-screen');
                 const timeDisplay = document.getElementById('lock-screen-time');
                 const dateDisplay = document.getElementById('lock-screen-date');
