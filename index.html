@@ -498,7 +498,14 @@
             const boundary = '-------314159265358979323846';
             const delimiter = `\r\n--${boundary}\r\n`;
             const close_delim = `\r\n--${boundary}--`;
-            const metadata = { 'name': BACKUP_FILENAME, 'mimeType': 'application/json' };
+            
+            // **FIX:** Added 'parents' property to explicitly save in the App Data Folder.
+            const metadata = {
+                'name': BACKUP_FILENAME,
+                'mimeType': 'application/json',
+                'parents': ['appDataFolder'] 
+            };
+
             const requestBody = delimiter + 'Content-Type: application/json\r\n\r\n' + JSON.stringify(metadata) + delimiter + 'Content-Type: application/json\r\n\r\n' + fileContent + close_delim;
             const path = `/upload/drive/v3/files${fileId ? `/${fileId}` : ''}`;
             const method = fileId ? 'PATCH' : 'POST';
@@ -531,7 +538,6 @@
         }
 
         // --- GLOBAL HELPER FUNCTIONS ---
-        // **FIX:** Moved these functions to the global scope
         function showStep(stepNumber) {
             const steps = { 1: document.getElementById('onboarding-step-1'), 2: document.getElementById('onboarding-step-2'), 3: document.getElementById('onboarding-step-3'), };
             Object.values(steps).forEach(step => step.classList.remove('active')); 
